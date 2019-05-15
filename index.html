@@ -6,7 +6,7 @@
 
 <script>
 
-   
+
     var filed_width = window.innerWidth;
     field_heigth = window.innerHeight;
     max_speed = 6;
@@ -30,8 +30,8 @@
 
     // ---- Bullet 
     var bullet_speed = 15
-    max_bounces = 100
-    max_bullets = 100
+    max_bounces = 3
+    max_bullets = 4
     bullets = []
 
     canvas.width = filed_width;
@@ -88,11 +88,11 @@
 
     function test(x, y, item_x, item_y, w, h) {
 
-        ctx.fillStyle = "orange";
-        ctx.fillRect(item_x, item_y, w, h);
+        // ctx.fillStyle = "orange";
+        // ctx.fillRect(item_x, item_y, w, h);
 
-        ctx.fillStyle = "orange";
-        ctx.fillRect(x, y, 5, 5);
+        // ctx.fillStyle = "orange";
+        // ctx.fillRect(x, y, 5, 5);
 
         if (
             x >= item_x && x <= item_x + w &&
@@ -252,7 +252,7 @@
                 }
 
 
-                if (check_collision(bullet.x, bullet.y, posX, posY, angle, tank_width, tank_height)) {
+                if (check_collision(bullet.x, bullet.y, posX, posY, angle, tank_width, tank_height,true)) {
                     destroyed = true;
                 }
 
@@ -263,7 +263,7 @@
                 ctx.translate(bullet.x, bullet.y);
                 ctx.rotate(bullet.angle);
                 ctx.fillStyle = "white";
-                ctx.fillRect(-25, -2.5, 50, 5);
+                ctx.fillRect(-10, -1.5, 20, 3);
                 ctx.restore();
 
 
@@ -351,8 +351,8 @@
         bullets.push({
             angle: angle,
             tails: [],
-            x: posX + ((rotatedX_2 + rotatedX_3) / 2) + acceleration * Math.cos(angle),
-            y: posY + ((rotatedY_2 + rotatedY_3) / 2) + acceleration * Math.sin(angle),
+            x: posX + ((rotatedX_2 + rotatedX_3) / 2) + acceleration * 2 * Math.cos(angle),
+            y: posY + ((rotatedY_2 + rotatedY_3) / 2) + acceleration * 2 * Math.sin(angle),
             bounced: 0
         })
 
@@ -391,7 +391,7 @@
 
     // if collision is happening
 
-    function check_collision(collision_x, collision_y, x, y, r, w, h, ) {
+    function check_collision(collision_x, collision_y, x, y, r, w, h, tank_hack) {
 
         ctx.save();
         ctx.translate(x, y);
@@ -402,12 +402,22 @@
         var collision_point = new DOMPoint(collision_x, collision_y);
         var relative_collision_point = objectInversMatrix.transformPoint(collision_point)
 
-        if (relative_collision_point.x > - (w / 2)
-            && relative_collision_point.x < ((w) / 2)
-            && relative_collision_point.y > -(h / 2)
-            && relative_collision_point.y < (h / 2)) {
-            return true
-        } else return false
+        if (tank_hack) {
+            if (relative_collision_point.x > - (w / 2)
+                && relative_collision_point.x < ((w-50) / 2)
+                && relative_collision_point.y > -(h / 2)
+                && relative_collision_point.y < (h / 2)) {
+                return true
+            } else return false
+        } else {
+            if (relative_collision_point.x > - (w / 2)
+                && relative_collision_point.x < ((w) / 2)
+                && relative_collision_point.y > -(h / 2)
+                && relative_collision_point.y < (h / 2)) {
+                return true
+            } else return false
+        }
+
 
     }
 
