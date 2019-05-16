@@ -1,11 +1,13 @@
 <html>
 
-<head></head>
+<head>
+    <script src="tank.js"></script>
+    <script src="bullet.js"></script>
+</head>
 
 <body style="margin:0px;"></body>
 
 <script>
-
 
     var filed_width = window.innerWidth;
     field_heigth = window.innerHeight;
@@ -111,6 +113,19 @@
             ctx.fillRect(item.x, item.y, item.w, item.h);
         })
 
+        if (forward) {
+            if (acceleration < max_speed)
+                acceleration += 0.1;
+        }
+
+        if (backward) {
+            if (acceleration > -max_speed)
+                acceleration -= 0.1;
+        }
+
+
+
+
         var crashed = false;
         var vertex = get_tank_vertex(posX, posY, angle);
 
@@ -124,33 +139,19 @@
 
         if (crashed) {
 
-            if (acceleration != 0) {
-                acceleration = Math.round((-acceleration) / 3);
-            }
-            else if (acceleration < 0) acceleration = 1
-            else acceleration = -1
+            // angle -= angular_acceleration;
+            posX -= (acceleration/2) * Math.cos(angle);
+            posY -= (acceleration/2) * Math.sin(angle);
 
-            if (angular_acceleration != 0) {
-                angular_acceleration = Math.round((-angular_acceleration) / 3);
-            }
-            else if (angular_acceleration < 0) angular_acceleration = 0.01
-            else angular_acceleration = -0.01
+            if (Math.abs(acceleration) < 1)
+                acceleration = acceleration < 0 ? -2 : 2;
+            else acceleration = (acceleration) / 2;
 
-            posX += acceleration * Math.cos(angle);
-            posY += acceleration * Math.sin(angle);
+            if (Math.abs(angular_acceleration) < 0.01)
+                angular_acceleration = angular_acceleration < 0 ? +0.05 : 0.05;
+            else angular_acceleration = angular_acceleration;
+
         } else {
-
-            if (forward) {
-                if (acceleration < max_speed)
-                    acceleration += 0.1;
-            }
-
-            if (backward) {
-                if (acceleration > -max_speed)
-                    acceleration -= 0.1;
-            }
-
-
             if (right) {
                 if (angular_acceleration < max_angular_speed)
                     angular_acceleration += 0.005
@@ -161,8 +162,6 @@
                     angular_acceleration -= 0.005
             }
 
-
-
             if (!left && !right) {
                 if (angular_acceleration <= 0.06 && angular_acceleration >= -0.06) angular_acceleration = 0
                 else if (angular_acceleration < 0) angular_acceleration += 0.02;
@@ -170,18 +169,16 @@
             }
 
             if (!forward && !backward && acceleration != 0) {
-
                 if (acceleration <= 0.6 && acceleration >= -0.6) acceleration = 0
                 else if (acceleration < 0) acceleration += 0.5;
                 else if (acceleration > 0) acceleration -= 0.5;
-
             }
 
             angle += angular_acceleration;
             posX += acceleration * Math.cos(angle);
             posY += acceleration * Math.sin(angle);
-
         }
+
 
 
 
@@ -252,7 +249,7 @@
                 }
 
 
-                if (check_collision(bullet.x, bullet.y, posX, posY, angle, tank_width, tank_height,true)) {
+                if (check_collision(bullet.x, bullet.y, posX, posY, angle, tank_width, tank_height, true)) {
                     destroyed = true;
                 }
 
@@ -404,7 +401,7 @@
 
         if (tank_hack) {
             if (relative_collision_point.x > - (w / 2)
-                && relative_collision_point.x < ((w-50) / 2)
+                && relative_collision_point.x < ((w - 50) / 2)
                 && relative_collision_point.y > -(h / 2)
                 && relative_collision_point.y < (h / 2)) {
                 return true
@@ -448,18 +445,54 @@
         xc2 = tempX_2 * cos
         ys1 = tempY_1 * sin
         ys2 = tempY_2 * sin
-
         xs1 = tempX_1 * sin
         xs2 = tempX_2 * sin
         yc1 = tempY_1 * cos
         yc2 = tempY_2 * cos
 
-        return [
+
+        var points = [
             [xc1 - ys1 + x, xs1 + yc1 + y],
-            [xc2 - ys2 + x, xs2 + yc2 + y],
             [xc2 - ys1 + x, xs2 + yc1 + y],
+            [xc2 - ys2 + x, xs2 + yc2 + y],
             [xc1 - ys2 + x, xs1 + yc2 + y]
         ]
+
+        var perimeter = [];
+
+        for (let i = 0; i < points.length; i++) {
+            var point_a = points[i];
+            var point_b = points[i == points.length - 1 ? 0 : i + 1]
+
+            if (point_a[0] > point_b[0]) {
+                var memory = point_a;
+                point_a = point_b
+                point_b = memory
+            }
+
+            var coordinates = [];
+            var xd = point_b[0] - point_a[0];
+            var yd = point_b[1] - point_a[1];
+            var dist = Math.sqrt(xd * xd + yd * yd);
+
+            for (let i = 0; i < dist; i = i + 2.5) {
+                perimeter.push(Get_coordinates_between_two_points(point_a, xd, yd, dist, i))
+            }
+
+        }
+
+        return perimeter
+
+    }
+
+
+    function Get_coordinates_between_two_points(p, xd, yd, d, i) {
+        const fractionOfTotal = i / d;
+
+        ctx.fillStyle = "yellow";
+        ctx.fillRect(p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal, 1, 1);
+
+        return [p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal]
 
     }
 
