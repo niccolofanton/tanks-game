@@ -1,54 +1,60 @@
-class bullet {
+class Bullet {
 
+    field_heigth = 0
+    filed_width = 0
     width = 20;
     height = 3;
     bullet_speed = 15
     max_bounces = 3
-    max_bullets = 4
-
     x = 0;
     y = 0;
     angle = 0;
     bounced_times = 0;
-
     ctx = null;
-    world_structures = [];
+    world_structures;
 
-    constructor(x, y, angle, ctx, world_structures) {
-        x = x;
-        y = y;
-        angle = angle;
-        ctx = ctx;
-        world_structures = world_structures;
+    constructor(x, y, angle, ctx, world_structures, field_heigth, filed_width) {
+        this.world_structures = world_structures;
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.ctx = ctx;
+        this.field_heigth = field_heigth;
+        this.filed_width = filed_width;
     }
 
     move() {
 
-        if (bounced_times < this.max_bounces) {
-            var border = true
+        var already_collided = false;
 
-            world_structures.forEach((item) => {
-                if (!collision_detection(item))
-                    border = false
-            })
+        this.world_structures.forEach((item) => {
+            if (this.collision_detection(item)) {
+                this.bounced_times++;
+                already_collided = true
+            }
+        })
 
-            if (border) {
+        if (!already_collided) {
 
-                if ((x < 0) || (x > filed_width)) {
-                    x.angle = toRads(180) - i.angle;
-                    i.bounced++;
-                }
-
-                if ((y < 0) || (y > field_heigth)) {
-                    angle = toRads(360) - angle
-                    bounced++;
-                }
-
+            if ((this.x <= 0) || (this.x >= this.filed_width)) {
+                this.x =  this.x < 0 ? 1 : this.filed_width -1;
+                this.angle = this.toRads(180) - this.angle;
+                this.bounced_times++;
             }
 
-            x += bullet_speed * Math.cos(bullet.angle);
-            y += bullet_speed * Math.sin(bullet.angle);
-            draw()
+            if ((this.y <= 0) || (this.y >= this.field_heigth)) {
+                this.y =  this.y <= 0 ? 1 : this.field_heigth -1;
+                this.angle = -this.angle
+                this.bounced_times++;
+            }
+
+        }
+
+        this.x += this.bullet_speed * Math.cos(this.angle);
+        this.y += this.bullet_speed * Math.sin(this.angle);
+
+        if (this.bounced_times < this.max_bounces) {
+            this.draw()
             return true;
         } else return false
 
@@ -56,42 +62,58 @@ class bullet {
 
     collision_detection(item) {
 
-        // ctx.fillStyle = item.color;
-        // ctx.fillRect(item.x, item.y, item.w, item.h);
-
-        var border = true;
-
+        var collision = false;
         if (
-            (x < item.x + item.w) && (x > item.x) &&
-            (y < item.y + item.h) && (y > item.y)
+            (this.x >= item.x) && (this.x <= item.x + item.w) &&
+            (this.y >= item.y) && (this.y <= item.y + item.h)
         ) {
 
-            border = false;
-            bounced++;
+            collision = true;
 
-            if (
-                x > item.x && x < item.x + bullet_speed ||
-                x > item.x + item.width - bullet_speed && x < item.x + item.width
-            )
-                angle = toRads(180) - angle;
-            else angle = -angle
+            if (this.x >= item.x && this.x <= item.x + Math.abs(this.bullet_speed * Math.cos(this.angle))) {
+                this.x = item.x - 1
+                this.angle = this.toRads(180) - this.angle;
+            }
+
+            if (this.x >= item.x - Math.abs(this.bullet_speed * Math.cos(this.angle)) + item.w && this.x <= item.x + item.w) {
+                this.x = item.x + item.w + 1
+                this.angle = this.toRads(180) - this.angle;
+            }
+
+
+            if (this.y >= item.y && this.y <= item.y + Math.abs(this.bullet_speed * Math.sin(this.angle))) {
+                this.y = item.y - 1
+                this.angle = -this.angle
+            }
+
+            if (this.y >= item.y - Math.abs(this.bullet_speed * Math.sin(this.angle)) + item.h && this.y <= item.y + item.h) {
+                this.y = item.y + item.h + 1
+                this.angle = -this.angle
+            }
+
+            // if (
+            //     this.x >= item.x + Math.abs(this.bullet_speed * Math.cos(this.angle)) ||
+            //     this.x <= item.x + item.w - Math.abs(this.bullet_speed * Math.cos(this.angle))
+            // )
+            //     this.angle = this.toRads(180) - this.angle;
+            // else this.angle = -this.angle
 
         }
 
-        return border
+        return collision
     }
 
     toRads(number) {
-        return (number + Math.PI) / 180;
+        return (number * Math.PI) / 180;
     }
 
     draw() {
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(bullet.angle);
-        ctx.fillStyle = "white";
-        ctx.fillRect(-(width / 2), -(height / 2), width, height);
-        ctx.restore();
+        this.ctx.save();
+        this.ctx.translate(this.x, this.y);
+        this.ctx.rotate(this.angle);
+        this.ctx.fillStyle = "white";
+        this.ctx.fillRect(-this.width, -(this.height / 2), this.width, this.height);
+        this.ctx.restore();
     }
 
 
