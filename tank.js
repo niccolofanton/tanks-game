@@ -28,7 +28,7 @@ class Tank {
         this.world_structures = world_structures;
         this.ctx = ctx;
         var _img = new Image();
-        _img.src = 'tank.png';
+        _img.src = 'white_tank.png';
         this.img = _img
         this.field_heigth = field_heigth;
         this.filed_width = filed_width;
@@ -46,7 +46,7 @@ class Tank {
             this.acceleration -= this.acceleration_frame;
     }
 
-    idleAcceleration() {        
+    idleAcceleration() {
         if (Math.abs(this.acceleration) <= 0.1) this.acceleration = 0
         else if (this.acceleration < 0) this.acceleration += 0.1;
         else if (this.acceleration > 0) this.acceleration -= 0.1;
@@ -62,7 +62,7 @@ class Tank {
             this.angular_acceleration -= this.angular_acceleration_frame
     }
 
-    idleRotation() {        
+    idleRotation() {
         if (Math.abs(this.angular_acceleration) <= 0.005) this.angular_acceleration = 0
         else if (this.angular_acceleration < 0) this.angular_acceleration += 0.005;
         else if (this.angular_acceleration > 0) this.angular_acceleration -= 0.005;
@@ -114,8 +114,9 @@ class Tank {
 
         // TODO: remove GOD mode
         // if (!this.destroyed) 
-        this.draw()
 
+        this.draw()
+        this.rayCasting()
     }
 
     checkCollisionWithStructure(x, y, item_x, item_y, w, h) {
@@ -267,8 +268,62 @@ class Tank {
                 this.destroyed = true;
             }
         }
+    }
+
+    rayCasting() {
+
+        this.ctx.fillStyle = "white";
+        this.ctx.globalAlpha = 0.32;
+        for (let i = 0; i < 360; i++) {
+
+            var point = [this.x, this.y];
+            var angle = this.toRads(i);
+
+            this.ctx.save()
+            this.ctx.translate(point[0], point[1]);
+            this.ctx.rotate(angle);
+
+            var length = 0
+            var _point = [this.x, this.y]
+            var stop = false;
+
+            while (!stop) {
+
+                for (let i = 0; i < this.world_structures.length; i++) {
+                    const element = this.world_structures[i];
+                    if (this.collide_with(element, _point))
+                        stop = true;
+                }
+
+                length++;
+                _point[0] += Math.cos(angle);
+                _point[1] += Math.sin(angle);
+
+                if (
+                    _point[0] < 0 || _point[0] > this.filed_width ||
+                    _point[1] < 0 || _point[1] > this.field_heigth
+                ) stop = true;
+
+            }
 
 
+            this.ctx.fillRect(0, 0, length, 1);
+            this.ctx.restore()
+
+        }
+
+        this.ctx.globalAlpha = 1;
+
+
+    }
+
+    collide_with(structure, point) {
+        return (
+            point[0] >= structure.x &&
+            point[0] <= structure.x + structure.w &&
+            point[1] >= structure.y &&
+            point[1] <= structure.y + structure.h
+        );
     }
 
     checkCollisionWithBullet(collision_x, collision_y, x, y, r, w, h, tank_hack) {

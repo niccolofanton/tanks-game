@@ -114,7 +114,8 @@ class World {
 
         while (rects.length < number) {
 
-            var color = '#' + Math.round(0xffffff * Math.random()).toString(16);
+            // var color = '#' + Math.round(0xffffff * Math.random()).toString(16);
+            var color = 'white';
             var coordx = Math.random() * filed_width + 150;
             var coordy = Math.random() * field_heigth + 100;
             var width = Math.random() * 80 + 20;
