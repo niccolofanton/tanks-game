@@ -105,7 +105,109 @@ class World {
             this.shot = false;
         }
 
+
+        var tankPerimeterPoints = tank.getPerimeterPoints(this.x, this.y, this.angle);
+        var collided = false;
+
+        structures.forEach((structure) => {
+
+            var tankCollisionsData = [];
+            var structureCenter = [structure.x + (structure.w / 2), structure.y + (structure.h / 2)]
+
+
+            for (let i = 0; i < tankPerimeterPoints.length; i++) {
+                const point = tankPerimeterPoints[i];
+
+                if (this.checkCollisionWithStructure(point[0], point[1], structure.x, structure.y, structure.w, structure.h)) {
+                    collided = true;
+                    var a = structureCenter[0] - point[0];
+                    var b = structureCenter[1] - point[1];
+
+                    tankCollisionsData.push({
+                        objectCenterX: tank.x,
+                        ojectCenterY: tank.y,
+                        impactPointX: point[0],
+                        impactPointY: point[1],
+                        collidedItemX: structure.x,
+                        collidedItemY: structure.y,
+                        collidedItemWidth: structure.w,
+                        collidedItemHeigth: structure.h,
+                        dist: Math.sqrt(a * a + b * b)
+                    })
+                }
+            }
+
+            if (tankCollisionsData.length > 0) {
+
+
+                var distances = []
+                tankCollisionsData.forEach(collisionData => {
+                    distances.push(collisionData.dist);
+                });
+
+
+                var maxPointToResolve = tankCollisionsData[distances.indexOf(Math.min(...distances))]
+
+                if (maxPointToResolve != -1) {
+                    const newCenter = this.collisionResolution(maxPointToResolve.objectCenterX, maxPointToResolve.ojectCenterY, maxPointToResolve.impactPointX, maxPointToResolve.impactPointY, maxPointToResolve.collidedItemX, maxPointToResolve.collidedItemY, maxPointToResolve.collidedItemWidth, maxPointToResolve.collidedItemHeigth)
+                    tank.x = newCenter[0];
+                    tank.y = newCenter[1];
+                }
+
+            }
+
+
+
+
+
+
+        })
+
+        // if (tank.x >= this.filed_width || tank.x <= 0 || tank.y >= this.field_heigth || tank.y <= 0) {
+        //     tankCollisionsData.push(tank.x, tank.y, tank.x, tank.y, tank.x + 1, tank.y + 1, this.filed_width, this.field_heigth)
+        // }
+
+
+
+        if (collided) {
+
+            tank.acceleration = -(tank.acceleration / 3);
+            tank.angular_acceleration = -(tank.angular_acceleration / 3);
+        }
+
         tank.move()
+    }
+
+    collisionResolution(objectCenterX, ojectCenterY, impactPointX, impactPointY, collidedItemX, collidedItemY, collidedItemWidth, collidedItemHeigth) {
+
+        const arr = [
+            Math.abs(impactPointX - collidedItemX),
+            Math.abs(impactPointX - (collidedItemX + collidedItemWidth)),
+            Math.abs(impactPointY - collidedItemY),
+            Math.abs(impactPointY - (collidedItemY + collidedItemHeigth))
+        ]
+
+        var lato = arr.indexOf(Math.min(...arr))
+
+        var newCenter = [objectCenterX, ojectCenterY]
+
+        if (lato == 0) newCenter[0] = collidedItemX - Math.abs(impactPointX - objectCenterX) - 2;
+        if (lato == 1) newCenter[0] = Math.abs(impactPointX - objectCenterX) + collidedItemX + collidedItemWidth + 2;
+        if (lato == 2) {
+            // TODO: add console log here
+            newCenter[1] = collidedItemY - Math.abs(impactPointY - ojectCenterY) - 2
+        }
+        if (lato == 3) newCenter[1] = collidedItemY + collidedItemHeigth + Math.abs(impactPointY - ojectCenterY) + 2;
+
+        return newCenter;
+    }
+
+    checkCollisionWithStructure(x, y, itemX, itemY, itemWidth, itemHeight) {
+        if (
+            x >= itemX && x <= itemX + itemWidth &&
+            y >= itemY && y <= itemY + itemHeight
+        ) return true
+        else return false;
     }
 
     create(number, filed_width, field_heigth) {

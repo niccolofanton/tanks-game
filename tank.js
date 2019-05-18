@@ -17,7 +17,7 @@ class Tank {
     destroyed = false;
 
     bullets = []
-    max_bullets = 4
+    max_bullets = 10
 
     world_structures = []
     ctx = null;
@@ -70,41 +70,6 @@ class Tank {
 
     move() {
 
-        var crashed = false;
-        var vertex = this.get_tank_vertex(this.x, this.y, this.angle);
-
-        this.world_structures.forEach((item) => {
-            vertex.forEach(point => {
-                if (this.checkCollisionWithStructure(point[0], point[1], item.x, item.y, item.w, item.h))
-                    crashed = true;
-            })
-        })
-
-        if (this.x >= this.filed_width) {
-            this.x = this.filed_width - 1;
-            this.crashed = true;
-        }
-        if (this.x <= 0) {
-            this.x = 1;
-            this.crashed = true;
-        }
-        if (this.y >= this.field_heigth) {
-            this.y = this.field_heigth - 1;
-            this.crashed = true;
-        }
-        if (this.y <= 0) {
-            this.y = 1;
-            this.crashed = true;
-        }
-
-        if (crashed) {
-            this.acceleration = 0;
-            this.angular_acceleration = 0;
-
-            // this.acceleration = -(this.acceleration / 3);
-            // this.angular_acceleration = -(this.angular_acceleration / 3);
-        }
-
         // if (this.angle > toRads(360)) this.angle = 0
         // if (this.angle < 0) this.angle = toRads(360) + this.angle;
 
@@ -116,82 +81,12 @@ class Tank {
         // if (!this.destroyed) 
 
         this.draw()
+
+        // RAYCASTING
         this.rayCasting()
     }
 
-    checkCollisionWithStructure(x, y, item_x, item_y, w, h) {
-        if (
-            x >= item_x && x <= item_x + w &&
-            y >= item_y && y <= item_y + h
-        ) {
-
-            // this.ctx.fillStyle = "yellow";
-            // this.ctx.fillRect(this.x, y, Math.abs(x - this.x), 80);
-
-            var dif_a = Math.abs(x - item_x)
-            var dif_b = Math.abs(x - (item_x + w))
-            var dif_c = Math.abs(y - item_y)
-            var dif_d = Math.abs(y - (item_y + h))
-
-            const arr = [Math.abs(x - item_x), Math.abs(x - (item_x + w)), Math.abs(y - item_y), Math.abs(y - (item_y + h))]
-            var lato = arr.indexOf(Math.min(...arr))
-
-
-            // console.log(lato);
-
-            if (lato == 0) this.x = item_x - Math.abs(x - this.x) - 2;
-            if (lato == 1) this.x = Math.abs(x - this.x) + item_x + w + 2;
-            if (lato == 2) {
-                // console.log(Math.abs(y - this.y));
-
-                console.table({
-                    impact: Math.round(y),
-                    center: Math.round(this.y)
-                });
-
-
-                this.y = item_y - Math.abs(y - this.y) - 2
-            }
-            if (lato == 3) this.y = item_y + h + Math.abs(y - this.y) + 2;
-
-
-            // if (y >= item_y && y <= item_y + Math.sin(this.angle) || y >= item_y + h - Math.sin(this.angle) && y <= item_y) {
-
-            //     if (y >= item_y && y <= item_y + Math.sin(this.angle))
-            //         this.y = item_y - Math.abs(y - this.y) - 2;
-            //     else
-            //         this.y = Math.abs(y - this.y) + item_y + h + 2;
-
-
-            // } else {
-
-
-            //     if (x >= item_x && x <= item_x + Math.cos(this.angle))
-            //         this.x = item_x - Math.abs(x - this.x) - 2;
-            //     else
-            //         this.x = Math.abs(x - this.x) + item_x + w + 2;
-
-
-            // }
-
-
-
-
-
-
-            // if (Math.abs(x - item_x) < Math.abs(x - item_x + w))
-            //     this.x = item_x - 1 - (this.tank_width/2);
-            // else this.x = item_x + w + 1 + (this.tank_width/2);;
-
-            // if (Math.abs(y - item_y) < Math.abs(y - item_y + h))
-            //     this.y = item_y - 1 - (this.tank_height/2);
-            // else this.y = item_y + h + 1 + (this.tank_height/2);
-
-            return true
-        }
-    }
-
-    get_tank_vertex() {
+    getPerimeterPoints() {
 
         var tempX_1 = (this.x - (this.tank_width / 2)) - this.x;
         var tempX_2 = (this.x + ((this.tank_width - 50) / 2)) - this.x;
@@ -273,7 +168,7 @@ class Tank {
     rayCasting() {
 
         this.ctx.fillStyle = "white";
-        this.ctx.globalAlpha = 0.32;
+        this.ctx.globalAlpha = 0.5;
         for (let i = 0; i < 360; i++) {
 
             var point = [this.x, this.y];
