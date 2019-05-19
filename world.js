@@ -202,7 +202,7 @@ class World {
         }
 
         tank.move()
-        // this.rayCasting(tank, structures)
+        this.rayCasting(tank, structures)
     }
 
     // ---- RAYCATING STUFF
@@ -210,75 +210,50 @@ class World {
     rayCasting(tank, structures) {
 
         this.ctx.fillStyle = "white";
-        this.ctx.globalAlpha = 0.5;
+        this.ctx.globalAlpha = 0.4;
 
         for (let i = 0; i < 360; i++) {
 
-            structures.forEach(structure => {
+            let length = 0
+            let stop = false;
+            let angle = this.toRads(i);
 
-                let angle = this.toRads(i);
+            let _point = {
+                x: tank.x,
+                y: tank.y
+            }
 
-                let pointA = {
-                    x: tank.x,
-                    y: tank.y
+            while (!stop) {
+
+                let _structure = this.getNearestStructureTo(_point.x, _point.y, structures)
+                // console.log(_structure);
+
+                if (this.checkCollisionWithStructure(_point, _structure))
+                    stop = true;
+                else {
+
+                    length += _structure.distance;
+                    _point.x += Math.cos(angle) * _structure.distance;
+                    _point.y += Math.sin(angle) * _structure.distance;
+
+                    if (
+                        _point.x < 0 || _point.x > this.filed_width ||
+                        _point.y < 0 || _point.y > this.field_heigth
+                    ) stop = true;
                 }
 
-                let pointB = {
-                    x: tank.x + tank.x * Math.cos(angle),
-                    y: tank.y + tank.y * Math.sin(angle),
-                }
 
-                let m = (pointB.y - pointA.y) / (pointB.x - pointA.x)
-                let sY = m * (structure.x - pointA.x) + pointA.y;
+            }
 
-                if (sY >= structure.y && sY <= structure.y + structure.h) {
-                    let xd = (structure.x + (structure.w / 2)) - pointA.x;
-                    let yd = (structure.y + (structure.h / 2)) - pointA.y;
-                    let distance = Math.sqrt(xd * xd + yd * yd);
-
-                    this.ctx.save()
-                    this.ctx.translate(pointA.x, pointA.y);
-                    this.ctx.rotate(angle);
-                    this.ctx.fillRect(0, 0, distance, 1);
-                    this.ctx.restore()
-                }else {
-
-                    // this.ctx.save()
-                    // this.ctx.translate(pointA.x, pointA.y);
-                    // this.ctx.rotate(angle);
-                    // this.ctx.fillRect(0, 0, 1000, 1);
-                    // this.ctx.restore()
-                }
-
-            })
-
-            // let length = 0
-            // let stop = false;
-
-            // while (!stop) {
-
-            //     let structure = this.getNearestStructuresTo(_point.x, _point.y, 1, structures)
-            //     if (this.checkCollisionWithStructure(_point, structure))
-            //         stop = true;
-
-            //         if()
-            //     length++;
-            //     _point[0] += Math.cos(angle);
-            //     _point[1] += Math.sin(angle);
-
-            //     if (
-            //         _point[0] < 0 || _point[0] > this.filed_width ||
-            //         _point[1] < 0 || _point[1] > this.field_heigth
-            //     ) stop = true;
-
-            // }
-
-           
+            this.ctx.save()
+            this.ctx.translate(tank.x + Math.cos(angle) * 60, tank.y + Math.sin(angle) * 60);
+            this.ctx.rotate(angle);
+            this.ctx.fillRect(0, 0, length-60, 1);
+            this.ctx.restore()
 
         }
 
         this.ctx.globalAlpha = 1;
-
 
     }
 
@@ -303,6 +278,24 @@ class World {
         return newCenter;
     }
 
+    getNearestStructureTo(x, y, _structures) {
+        let structures = []
+        _structures.forEach(element => structures.push(element));
+        let distances = []
+
+        structures.forEach(structure => {
+            let xd = (structure.x + (structure.w / 2)) - x;
+            let yd = (structure.y + (structure.h / 2)) - y;
+            structure.distance = Math.sqrt(xd * xd + yd * yd);
+            distances.push(Math.sqrt(xd * xd + yd * yd))
+        })
+
+
+        let index = distances.indexOf(Math.min(...distances))
+        return structures[index]
+
+
+    }
 
     getNearestStructuresTo(x, y, objectRay, _structures) {
         let structures = []
@@ -406,7 +399,7 @@ class World {
         while (rects.length < number) {
 
             // let color = '#' + Math.round(0xffffff * Math.random()).toString(16);
-            let color = 'red';
+            let color = 'white';
             let coordx = Math.random() * filed_width + 150;
             let coordy = Math.random() * field_heigth + 100;
             let width = Math.random() * 80 + 20;
