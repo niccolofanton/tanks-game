@@ -12,6 +12,7 @@ class World {
 
     constructor() {
 
+        // set up world
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
         this.filed_width = window.innerWidth;
@@ -20,14 +21,11 @@ class World {
         this.canvas.height = this.field_heigth;
         document.body.appendChild(this.canvas);
 
-        this.ctx.fillStyle = "black";
-        this.ctx.fillRect(0, 0, this.width, this.heigth);
-
-        // calc new stractures
-        var structures = this.create(10, this.filed_width, this.field_heigth);
+        // generate new random stractures
+        let structures = this.create(10, this.filed_width, this.field_heigth);
 
         // create new tank
-        var tank = new Tank(structures, this.ctx, this.field_heigth, this.filed_width);
+        let tank = new Tank(structures, this.ctx, this.field_heigth, this.filed_width);
 
         // Bind commands
         window.addEventListener("keydown", (event) => {
@@ -72,7 +70,7 @@ class World {
         }, true);
 
 
-        // draw function
+        // main draw function
         setInterval(() => this.draw(this.ctx, tank, structures, this.filed_width, this.field_heigth), 16)
 
     }
@@ -80,6 +78,7 @@ class World {
 
     draw(ctx, tank, structures, width, heigth) {
 
+        // draw black background
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, heigth);
 
@@ -87,6 +86,96 @@ class World {
             ctx.fillStyle = structure.color;
             ctx.fillRect(structure.x, structure.y, structure.w, structure.h);
         })
+
+        let nearestStructuresToTank = this.getNearestStructuresTo(tank.x, tank.y, tank.tank_width, structures);
+        if (nearestStructuresToTank.length > 0) {
+
+
+            // get tank perimeters points
+            let tankPerimeterPoints = tank.getPerimeterPoints(tank.x, tank.y, tank.angle);
+
+            nearestStructuresToTank.forEach(structure => {
+
+                let tankCollisionsData = [];
+                let structureCenter = {
+                    x: structure.x + (structure.w / 2),
+                    y: structure.y + (structure.h / 2)
+                };
+
+                for (let i = 0; i < tankPerimeterPoints.length; i++) {
+                    const point = tankPerimeterPoints[i];
+
+                    if (this.checkCollisionWithStructure(point, structure)) {
+
+                        let a = structureCenter.x - point.x;
+                        let b = structureCenter.y - point.y;
+
+                        tankCollisionsData.push({
+                            center: {
+                                x: tank.x,
+                                y: tank.y
+                            },
+                            impactPoint: point,
+                            collidedStructure: structure,
+                            distance: Math.sqrt(a * a + b * b)
+                        })
+                    }
+                }
+
+                if (tankCollisionsData.length > 0) {
+
+                    let distances = []
+                    tankCollisionsData.forEach(collisionData => {
+                        distances.push(collisionData.distance);
+                    });
+
+
+                    let maxPointToResolve = tankCollisionsData[distances.indexOf(Math.min(...distances))]
+
+                    if (maxPointToResolve != -1) {
+                        const newCenter = this.tankCollisionResolution(maxPointToResolve.center,
+                            maxPointToResolve.impactPoint,
+                            maxPointToResolve.collidedStructure);
+
+                        tank.x = newCenter[0];
+                        tank.y = newCenter[1];
+                        tank.acceleration = -(tank.acceleration / 3);
+                        tank.angular_acceleration = 0;
+                    }
+
+                }
+
+            })
+
+        }
+
+
+        tank.bullets.forEach(bullet => {
+            this.getNearestStructuresTo(bullet.x, bullet.y, 1, structures).forEach(structure => {
+                if (this.checkCollisionWithStructure(bullet, structure)) {
+                    this.bulletCollisionResolution(bullet, structure)
+                }
+            });
+        })
+
+
+        if (tank.x >= this.filed_width || tank.x <= 0 || tank.y >= this.field_heigth || tank.y <= 0) {
+            if (tank.x >= this.filed_width) tank.x = this.filed_width - 1;
+            if (tank.x <= 0) tank.x = 1;
+            if (tank.y >= this.filed_width) tank.x = this.field_heigth - 1;
+            if (tank.y <= 0) tank.y = 1;
+            tank.acceleration = -(tank.acceleration / 3);
+            tank.angular_acceleration = 0;
+        }
+
+
+        for (let i = 0; i < tank.bullets.length; i++) {
+            const bullet = tank.bullets[i];
+            if (this.checkCollisionWithBullet(bullet.x, bullet.y, tank.x, tank.y, tank.angle, tank.tank_width, tank.tank_height)) {
+                tank.destroyed = true;
+            }
+        }
+
 
         if (this.forward) tank.accelerate()
 
@@ -101,135 +190,235 @@ class World {
         if (!this.forward && !this.backward) tank.idleAcceleration()
 
         if (this.shot) {
+
+            // for (let i = 0; i < 50000; i++) {
+            //     tank.x = Math.random() * this.filed_width;
+            //     tank.y = Math.random() * this.field_heigth;
+            //     tank.angle = this.toRads(Math.random() * 360);
+
+            // }
             tank.shot();
             this.shot = false;
         }
 
-
-        var tankPerimeterPoints = tank.getPerimeterPoints(this.x, this.y, this.angle);
-        var collided = false;
-
-        structures.forEach((structure) => {
-
-            var tankCollisionsData = [];
-            var structureCenter = [structure.x + (structure.w / 2), structure.y + (structure.h / 2)]
-
-
-            for (let i = 0; i < tankPerimeterPoints.length; i++) {
-                const point = tankPerimeterPoints[i];
-
-                if (this.checkCollisionWithStructure(point[0], point[1], structure.x, structure.y, structure.w, structure.h)) {
-                    collided = true;
-                    var a = structureCenter[0] - point[0];
-                    var b = structureCenter[1] - point[1];
-
-                    tankCollisionsData.push({
-                        objectCenterX: tank.x,
-                        ojectCenterY: tank.y,
-                        impactPointX: point[0],
-                        impactPointY: point[1],
-                        collidedItemX: structure.x,
-                        collidedItemY: structure.y,
-                        collidedItemWidth: structure.w,
-                        collidedItemHeigth: structure.h,
-                        dist: Math.sqrt(a * a + b * b)
-                    })
-                }
-            }
-
-            if (tankCollisionsData.length > 0) {
-
-
-                var distances = []
-                tankCollisionsData.forEach(collisionData => {
-                    distances.push(collisionData.dist);
-                });
-
-
-                var maxPointToResolve = tankCollisionsData[distances.indexOf(Math.min(...distances))]
-
-                if (maxPointToResolve != -1) {
-                    const newCenter = this.collisionResolution(maxPointToResolve.objectCenterX, maxPointToResolve.ojectCenterY, maxPointToResolve.impactPointX, maxPointToResolve.impactPointY, maxPointToResolve.collidedItemX, maxPointToResolve.collidedItemY, maxPointToResolve.collidedItemWidth, maxPointToResolve.collidedItemHeigth)
-                    tank.x = newCenter[0];
-                    tank.y = newCenter[1];
-                }
-
-            }
-
-
-
-
-
-
-        })
-
-        // if (tank.x >= this.filed_width || tank.x <= 0 || tank.y >= this.field_heigth || tank.y <= 0) {
-        //     tankCollisionsData.push(tank.x, tank.y, tank.x, tank.y, tank.x + 1, tank.y + 1, this.filed_width, this.field_heigth)
-        // }
-
-
-
-        if (collided) {
-
-            tank.acceleration = -(tank.acceleration / 3);
-            tank.angular_acceleration = -(tank.angular_acceleration / 3);
-        }
-
         tank.move()
+        // this.rayCasting(tank, structures)
     }
 
-    collisionResolution(objectCenterX, ojectCenterY, impactPointX, impactPointY, collidedItemX, collidedItemY, collidedItemWidth, collidedItemHeigth) {
+    // ---- RAYCATING STUFF
+
+    rayCasting(tank, structures) {
+
+        this.ctx.fillStyle = "white";
+        this.ctx.globalAlpha = 0.5;
+
+        for (let i = 0; i < 360; i++) {
+
+            structures.forEach(structure => {
+
+                let angle = this.toRads(i);
+
+                let pointA = {
+                    x: tank.x,
+                    y: tank.y
+                }
+
+                let pointB = {
+                    x: tank.x + tank.x * Math.cos(angle),
+                    y: tank.y + tank.y * Math.sin(angle),
+                }
+
+                let m = (pointB.y - pointA.y) / (pointB.x - pointA.x)
+                let sY = m * (structure.x - pointA.x) + pointA.y;
+
+                if (sY >= structure.y && sY <= structure.y + structure.h) {
+                    let xd = (structure.x + (structure.w / 2)) - pointA.x;
+                    let yd = (structure.y + (structure.h / 2)) - pointA.y;
+                    let distance = Math.sqrt(xd * xd + yd * yd);
+
+                    this.ctx.save()
+                    this.ctx.translate(pointA.x, pointA.y);
+                    this.ctx.rotate(angle);
+                    this.ctx.fillRect(0, 0, distance, 1);
+                    this.ctx.restore()
+                }else {
+
+                    // this.ctx.save()
+                    // this.ctx.translate(pointA.x, pointA.y);
+                    // this.ctx.rotate(angle);
+                    // this.ctx.fillRect(0, 0, 1000, 1);
+                    // this.ctx.restore()
+                }
+
+            })
+
+            // let length = 0
+            // let stop = false;
+
+            // while (!stop) {
+
+            //     let structure = this.getNearestStructuresTo(_point.x, _point.y, 1, structures)
+            //     if (this.checkCollisionWithStructure(_point, structure))
+            //         stop = true;
+
+            //         if()
+            //     length++;
+            //     _point[0] += Math.cos(angle);
+            //     _point[1] += Math.sin(angle);
+
+            //     if (
+            //         _point[0] < 0 || _point[0] > this.filed_width ||
+            //         _point[1] < 0 || _point[1] > this.field_heigth
+            //     ) stop = true;
+
+            // }
+
+           
+
+        }
+
+        this.ctx.globalAlpha = 1;
+
+
+    }
+
+    tankCollisionResolution(objectCenter, impactPoint, collidedItem) {
 
         const arr = [
-            Math.abs(impactPointX - collidedItemX),
-            Math.abs(impactPointX - (collidedItemX + collidedItemWidth)),
-            Math.abs(impactPointY - collidedItemY),
-            Math.abs(impactPointY - (collidedItemY + collidedItemHeigth))
+            Math.abs(impactPoint.x - collidedItem.x),
+            Math.abs(impactPoint.x - (collidedItem.x + collidedItem.w)),
+            Math.abs(impactPoint.y - collidedItem.y),
+            Math.abs(impactPoint.y - (collidedItem.y + collidedItem.h))
         ]
 
-        var lato = arr.indexOf(Math.min(...arr))
+        let lato = arr.indexOf(Math.min(...arr))
 
-        var newCenter = [objectCenterX, ojectCenterY]
+        let newCenter = [objectCenter.x, objectCenter.y]
 
-        if (lato == 0) newCenter[0] = collidedItemX - Math.abs(impactPointX - objectCenterX) - 2;
-        if (lato == 1) newCenter[0] = Math.abs(impactPointX - objectCenterX) + collidedItemX + collidedItemWidth + 2;
-        if (lato == 2) {
-            // TODO: add console log here
-            newCenter[1] = collidedItemY - Math.abs(impactPointY - ojectCenterY) - 2
-        }
-        if (lato == 3) newCenter[1] = collidedItemY + collidedItemHeigth + Math.abs(impactPointY - ojectCenterY) + 2;
+        if (lato == 0) newCenter[0] = collidedItem.x - Math.abs(impactPoint.x - objectCenter.x) - 2;
+        if (lato == 1) newCenter[0] = Math.abs(impactPoint.x - objectCenter.x) + collidedItem.x + collidedItem.w + 2;
+        if (lato == 2) newCenter[1] = collidedItem.y - Math.abs(impactPoint.y - objectCenter.y) - 2
+        if (lato == 3) newCenter[1] = collidedItem.y + collidedItem.h + Math.abs(impactPoint.y - objectCenter.y) + 2;
 
         return newCenter;
     }
 
-    checkCollisionWithStructure(x, y, itemX, itemY, itemWidth, itemHeight) {
+
+    getNearestStructuresTo(x, y, objectRay, _structures) {
+        let structures = []
+        _structures.forEach(element => structures.push(element));
+
+
+        let _nearest2Structures = []
+        let distances = []
+
+        structures.forEach(structure => {
+            let xd = (structure.x + (structure.w / 2)) - x;
+            let yd = (structure.y + (structure.h / 2)) - y;
+            structure.distance = Math.sqrt(xd * xd + yd * yd);
+            distances.push(Math.sqrt(xd * xd + yd * yd))
+        })
+
+
+        let index = distances.indexOf(Math.min(...distances))
+        _nearest2Structures.push(structures[index])
+        structures.splice(index, 1)
+        distances.splice(index, 1)
+        _nearest2Structures.push(structures[distances.indexOf(Math.min(...distances))])
+        let tankAreaLenght = objectRay / 2
+
+
+        let response = []
+        _nearest2Structures.forEach(structure => {
+
+            let structureXD = structure.x - structure.x + (structure.w / 2)
+            let structureYD = structure.y - structure.y + (structure.h / 2)
+            let structureAreaLenght = Math.sqrt(structureXD * structureXD + structureYD * structureYD);
+
+            if (tankAreaLenght + structureAreaLenght > structure.distance)
+                response.push(structure)
+
+        });
+
+        return response
+
+    }
+
+    bulletCollisionResolution(bullet, structure) {
+
+        let arr = [
+            Math.abs(bullet.x - structure.x),
+            Math.abs(bullet.x - (structure.x + structure.w)),
+            Math.abs(bullet.y - structure.y),
+            Math.abs(bullet.y - (structure.y + structure.h))
+        ]
+
+        let lato = arr.indexOf(Math.min(...arr))
+
+        let angle = null;
+        if (lato <= 1) {
+            angle = this.toRads(180) - bullet.angle;
+            if (lato == 0) bullet.x = structure.x - 1;
+            if (lato == 1) bullet.x = structure.x + structure.w + 1;
+
+        } else {
+            angle = -bullet.angle;
+            if (lato == 2) bullet.y = structure.y - 1;
+            if (lato == 3) bullet.y = structure.y + structure.h + 1;
+        }
+
+        bullet.bounced_times++;
+        bullet.angle = angle;
+    }
+
+    checkCollisionWithStructure(point, structure) {
         if (
-            x >= itemX && x <= itemX + itemWidth &&
-            y >= itemY && y <= itemY + itemHeight
+            point.x >= structure.x && point.x <= structure.x + structure.w &&
+            point.y >= structure.y && point.y <= structure.y + structure.h
         ) return true
         else return false;
     }
 
+    checkCollisionWithBullet(collision_x, collision_y, x, y, r, w, h) {
+
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        this.ctx.rotate(r);
+        let objectInversMatrix = this.ctx.getTransform().invertSelf();
+        this.ctx.restore()
+
+        let collision_point = new DOMPoint(collision_x, collision_y);
+        let relative_collision_point = objectInversMatrix.transformPoint(collision_point)
+
+        if (relative_collision_point.x > -(w / 2) &&
+            relative_collision_point.x < ((w - 50) / 2) &&
+            relative_collision_point.y > -(h / 2) &&
+            relative_collision_point.y < (h / 2)) {
+            return true
+        } else return false
+
+    }
+
     create(number, filed_width, field_heigth) {
 
-        var rects = []
+        let rects = []
 
         while (rects.length < number) {
 
-            // var color = '#' + Math.round(0xffffff * Math.random()).toString(16);
-            var color = 'white';
-            var coordx = Math.random() * filed_width + 150;
-            var coordy = Math.random() * field_heigth + 100;
-            var width = Math.random() * 80 + 20;
-            var height = Math.random() * 80 + 20;
-            var rect = {
+            // let color = '#' + Math.round(0xffffff * Math.random()).toString(16);
+            let color = 'red';
+            let coordx = Math.random() * filed_width + 150;
+            let coordy = Math.random() * field_heigth + 100;
+            let width = Math.random() * 80 + 20;
+            let height = Math.random() * 80 + 20;
+            let rect = {
                 color: color,
                 x: coordx,
                 y: coordy,
                 w: width,
                 h: height
             }
-            var ok = true;
+            let ok = true;
             rects.forEach((item) => {
                 if (this.isCollide(rect, item)) ok = false
             })
@@ -251,223 +440,8 @@ class World {
         );
     }
 
+    toRads(number) {
+        return (number * Math.PI) / 180;
+    }
+
 }
-
-
-// setInterval(() => {
-
-//     database.ref('tank_1/').update({
-//         x: Math.round(posX),
-//         y: Math.round(posY),
-//         rotation: Math.round(angle)
-//     });
-
-// }, 100)
-
-// function shot() {
-
-//     tempX_2 = (posX + ((tank_width) / 2)) - posX;
-//     tempX_3 = (posX + ((tank_width) / 2)) - posX;
-//     tempY_2 = (posY + (tank_height / 2)) - posY;
-//     tempY_3 = (posY - (tank_height / 2)) - posY;
-//     rotatedX_2 = tempX_2 * Math.cos(angle) - tempY_2 * Math.sin(angle);
-//     rotatedX_3 = tempX_3 * Math.cos(angle) - tempY_3 * Math.sin(angle);
-//     rotatedY_2 = tempX_2 * Math.sin(angle) + tempY_2 * Math.cos(angle);
-//     rotatedY_3 = tempX_3 * Math.sin(angle) + tempY_3 * Math.cos(angle);
-
-//     bullets.push({
-//         angle: angle,
-//         tails: [],
-//         x: posX + ((rotatedX_2 + rotatedX_3) / 2) + acceleration * 2 * Math.cos(angle),
-//         y: posY + ((rotatedY_2 + rotatedY_3) / 2) + acceleration * 2 * Math.sin(angle),
-//         bounced: 0
-//     })
-
-// }
-
-// function collision(bx, by, angle_r, x, y) {
-
-//     ctx.save();
-//     ctx.translate(x, y);
-//     ctx.rotate(angle_r);
-//     var tankInvMatrix = ctx.getTransform().invertSelf();
-//     ctx.restore()
-
-//     var bullet = new DOMPoint(bx, by);
-//     var relBullet = tankInvMatrix.transformPoint(bullet)
-
-//     if (relBullet.x > - (tank_width / 2)
-//         && relBullet.x < ((tank_width - 50) / 2)
-//         && relBullet.y > -(tank_height / 2)
-//         && relBullet.y < (tank_height / 2)) {
-//         return true
-//     } else return false
-
-// }
-
-
-// if collision is happening
-
-// function check_collision(collision_x, collision_y, x, y, r, w, h, tank_hack) {
-
-//     ctx.save();
-//     ctx.translate(x, y);
-//     ctx.rotate(r);
-//     var objectInversMatrix = ctx.getTransform().invertSelf();
-//     ctx.restore()
-
-//     var collision_point = new DOMPoint(collision_x, collision_y);
-//     var relative_collision_point = objectInversMatrix.transformPoint(collision_point)
-
-//     if (tank_hack) {
-//         if (relative_collision_point.x > - (w / 2)
-//             && relative_collision_point.x < ((w - 50) / 2)
-//             && relative_collision_point.y > -(h / 2)
-//             && relative_collision_point.y < (h / 2)) {
-//             return true
-//         } else return false
-//     } else {
-//         if (relative_collision_point.x > - (w / 2)
-//             && relative_collision_point.x < ((w) / 2)
-//             && relative_collision_point.y > -(h / 2)
-//             && relative_collision_point.y < (h / 2)) {
-//             return true
-//         } else return false
-//     }
-
-
-// }
-
-
-// function get_tank_vertex(x, y, angle) {
-//     // tempX_4 = (posX - (tank_width / 2)) - posX;
-//     // tempX_3 = (posX + ((tank_width - 50) / 2)) - posX;
-//     // tempY_3 = (posY - (tank_height / 2)) - posY;
-//     // tempY_4 = (posY + (tank_height / 2)) - posY;
-//     // rotatedX_1 = xc1 - ys1;
-//     // rotatedX_2 = xc2 - ys2;
-//     // rotatedX_3 = xc2 - ys1;
-//     // rotatedX_4 = xc1 - ys2;
-//     // rotatedY_1 = xs1 + yc1;
-//     // rotatedY_2 = xs2 + yc2;
-//     // rotatedY_3 = xs2 + yc1;
-//     // rotatedY_4 = xs1 + yc2;
-
-//     var
-//         tempX_1 = (x - (tank_width / 2)) - x;
-//     tempX_2 = (x + ((tank_width - 50) / 2)) - x;
-//     tempY_1 = (y - (tank_height / 2)) - y;
-//     tempY_2 = (y + (tank_height / 2)) - y;
-//     sin = Math.sin(angle)
-//     cos = Math.cos(angle)
-
-//     xc1 = tempX_1 * cos
-//     xc2 = tempX_2 * cos
-//     ys1 = tempY_1 * sin
-//     ys2 = tempY_2 * sin
-//     xs1 = tempX_1 * sin
-//     xs2 = tempX_2 * sin
-//     yc1 = tempY_1 * cos
-//     yc2 = tempY_2 * cos
-
-
-//     var points = [
-//         [xc1 - ys1 + x, xs1 + yc1 + y],
-//         [xc2 - ys1 + x, xs2 + yc1 + y],
-//         [xc2 - ys2 + x, xs2 + yc2 + y],
-//         [xc1 - ys2 + x, xs1 + yc2 + y]
-//     ]
-
-//     var perimeter = [];
-
-//     for (let i = 0; i < points.length; i++) {
-//         var point_a = points[i];
-//         var point_b = points[i == points.length - 1 ? 0 : i + 1]
-
-//         if (point_a[0] > point_b[0]) {
-//             var memory = point_a;
-//             point_a = point_b
-//             point_b = memory
-//         }
-
-//         var coordinates = [];
-//         var xd = point_b[0] - point_a[0];
-//         var yd = point_b[1] - point_a[1];
-//         var dist = Math.sqrt(xd * xd + yd * yd);
-
-//         for (let i = 0; i < dist; i = i + 2.5) {
-//             perimeter.push(Get_coordinates_between_two_points(point_a, xd, yd, dist, i))
-//         }
-
-//     }
-
-//     return perimeter
-
-// }
-
-
-// function Get_coordinates_between_two_points(p, xd, yd, d, i) {
-//     const fractionOfTotal = i / d;
-
-//     ctx.fillStyle = "yellow";
-//     ctx.fillRect(p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal, 1, 1);
-
-//     return [p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal]
-
-// }
-
-
-
-
-// function test(x, y, item_x, item_y, w, h) {
-//     if (
-//         x >= item_x && x <= item_x + w &&
-//         y >= item_y && y <= item_y + h
-//     ) return true
-// }
-
-
-
-// function calcHitbox(angle, x, y, draw) {
-
-//     var tempX_1 = (posX - (tank_width / 2)) - posX;
-//     tempX_2 = (posX + ((tank_width - 50) / 2)) - posX;
-//     tempX_3 = (posX + ((tank_width - 50) / 2)) - posX;
-//     tempX_4 = (posX - (tank_width / 2)) - posX;
-//     tempY_1 = (posY - (tank_height / 2)) - posY;
-//     tempY_2 = (posY + (tank_height / 2)) - posY;
-//     tempY_3 = (posY - (tank_height / 2)) - posY;
-//     tempY_4 = (posY + (tank_height / 2)) - posY;
-
-//     rotatedX_1 = tempX_1 * Math.cos(angle) - tempY_1 * Math.sin(angle);
-//     rotatedX_2 = tempX_2 * Math.cos(angle) - tempY_2 * Math.sin(angle);
-//     rotatedX_3 = tempX_3 * Math.cos(angle) - tempY_3 * Math.sin(angle);
-//     rotatedX_4 = tempX_4 * Math.cos(angle) - tempY_4 * Math.sin(angle);
-
-//     rotatedY_1 = tempX_1 * Math.sin(angle) + tempY_1 * Math.cos(angle);
-//     rotatedY_2 = tempX_2 * Math.sin(angle) + tempY_2 * Math.cos(angle);
-//     rotatedY_3 = tempX_3 * Math.sin(angle) + tempY_3 * Math.cos(angle);
-//     rotatedY_4 = tempX_4 * Math.sin(angle) + tempY_4 * Math.cos(angle);
-
-//     if (draw) {
-//         ctx.fillStyle = "green";
-//         ctx.fillRect(rotatedX_1 + posX, rotatedY_1 + posY, 2, 2);
-
-//         ctx.fillStyle = "yellow";
-//         ctx.fillRect(rotatedX_3 + posX, rotatedY_3 + posY, 2, 2);
-
-//         ctx.fillStyle = "red";
-//         ctx.fillRect(rotatedX_2 + posX, rotatedY_2 + posY, 2, 2);
-
-//         ctx.fillStyle = "orange";
-//         ctx.fillRect(rotatedX_4 + posX, rotatedY_4 + posY, 2, 2);
-//     }
-
-//     return [
-//         [rotatedX_1 + x, rotatedY_1 + y],
-//         [rotatedX_2 + x, rotatedY_2 + y],
-//         [rotatedX_3 + x, rotatedY_3 + y],
-//         [rotatedX_4 + x, rotatedY_4 + y],
-//     ]
-
-// }

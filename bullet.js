@@ -5,7 +5,7 @@ class Bullet {
     width = 20;
     height = 3;
     bullet_speed = 15
-    max_bounces = 10
+    max_bounces = 10000000
     x = 0;
     y = 0;
     angle = 0;
@@ -25,30 +25,19 @@ class Bullet {
 
     move() {
 
-        var already_collided = false;
-
-        this.world_structures.forEach((item) => {
-            if (this.collision_detection(item)) {
-                this.bounced_times++;
-                already_collided = true
-            }
-        })
-
-        if (!already_collided) {
-
-            if ((this.x <= 0) || (this.x >= this.filed_width)) {
-                this.x =  this.x < 0 ? 1 : this.filed_width -1;
-                this.angle = this.toRads(180) - this.angle;
-                this.bounced_times++;
-            }
-
-            if ((this.y <= 0) || (this.y >= this.field_heigth)) {
-                this.y =  this.y <= 0 ? 1 : this.field_heigth -1;
-                this.angle = -this.angle
-                this.bounced_times++;
-            }
-
+        if ((this.x <= 0) || (this.x >= this.filed_width)) {
+            this.x = this.x < 0 ? 1 : this.filed_width - 1;
+            this.angle = this.toRads(180) - this.angle;
+            this.bounced_times++;
         }
+
+        if ((this.y <= 0) || (this.y >= this.field_heigth)) {
+            this.y = this.y <= 0 ? 1 : this.field_heigth - 1;
+            this.angle = -this.angle
+            this.bounced_times++;
+        }
+
+
 
         this.x += this.bullet_speed * Math.cos(this.angle);
         this.y += this.bullet_speed * Math.sin(this.angle);
@@ -60,48 +49,7 @@ class Bullet {
 
     }
 
-    collision_detection(item) {
 
-        var collision = false;
-        if (
-            (this.x >= item.x) && (this.x <= item.x + item.w) &&
-            (this.y >= item.y) && (this.y <= item.y + item.h)
-        ) {
-
-            collision = true;
-
-            if (this.x >= item.x && this.x <= item.x + Math.abs(this.bullet_speed * Math.cos(this.angle))) {
-                this.x = item.x - 1
-                this.angle = this.toRads(180) - this.angle;
-            }
-
-            if (this.x >= item.x - Math.abs(this.bullet_speed * Math.cos(this.angle)) + item.w && this.x <= item.x + item.w) {
-                this.x = item.x + item.w + 1
-                this.angle = this.toRads(180) - this.angle;
-            }
-
-
-            if (this.y >= item.y && this.y <= item.y + Math.abs(this.bullet_speed * Math.sin(this.angle))) {
-                this.y = item.y - 1
-                this.angle = -this.angle
-            }
-
-            if (this.y >= item.y - Math.abs(this.bullet_speed * Math.sin(this.angle)) + item.h && this.y <= item.y + item.h) {
-                this.y = item.y + item.h + 1
-                this.angle = -this.angle
-            }
-
-            // if (
-            //     this.x >= item.x + Math.abs(this.bullet_speed * Math.cos(this.angle)) ||
-            //     this.x <= item.x + item.w - Math.abs(this.bullet_speed * Math.cos(this.angle))
-            // )
-            //     this.angle = this.toRads(180) - this.angle;
-            // else this.angle = -this.angle
-
-        }
-
-        return collision
-    }
 
     toRads(number) {
         return (number * Math.PI) / 180;

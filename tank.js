@@ -17,7 +17,7 @@ class Tank {
     destroyed = false;
 
     bullets = []
-    max_bullets = 10
+    max_bullets = 100000
 
     world_structures = []
     ctx = null;
@@ -27,7 +27,7 @@ class Tank {
     constructor(world_structures, ctx, field_heigth, filed_width) {
         this.world_structures = world_structures;
         this.ctx = ctx;
-        var _img = new Image();
+        let _img = new Image();
         _img.src = 'white_tank.png';
         this.img = _img
         this.field_heigth = field_heigth;
@@ -70,8 +70,8 @@ class Tank {
 
     move() {
 
-        // if (this.angle > toRads(360)) this.angle = 0
-        // if (this.angle < 0) this.angle = toRads(360) + this.angle;
+        if (this.angle > this.toRads(360)) this.angle = 0
+        if (this.angle < 0) this.angle = this.toRads(360) + this.angle;
 
         this.angle += this.angular_acceleration;
         this.x += this.acceleration * Math.cos(this.angle);
@@ -81,69 +81,66 @@ class Tank {
         // if (!this.destroyed) 
 
         this.draw()
-
-        // RAYCASTING
-        this.rayCasting()
     }
 
     getPerimeterPoints() {
 
-        var tempX_1 = (this.x - (this.tank_width / 2)) - this.x;
-        var tempX_2 = (this.x + ((this.tank_width - 50) / 2)) - this.x;
-        var tempY_1 = (this.y - (this.tank_height / 2)) - this.y;
-        var tempY_2 = (this.y + (this.tank_height / 2)) - this.y;
-        var sin = Math.sin(this.angle)
-        var cos = Math.cos(this.angle)
-        var xc1 = tempX_1 * cos
-        var xc2 = tempX_2 * cos
-        var ys1 = tempY_1 * sin
-        var ys2 = tempY_2 * sin
-        var xs1 = tempX_1 * sin
-        var xs2 = tempX_2 * sin
-        var yc1 = tempY_1 * cos
-        var yc2 = tempY_2 * cos
+        let tempX_1 = (this.x - (this.tank_width / 2)) - this.x;
+        let tempX_2 = (this.x + ((this.tank_width - 40) / 2)) - this.x;
+        let tempY_1 = (this.y - (this.tank_height / 2)) - this.y;
+        let tempY_2 = (this.y + (this.tank_height / 2)) - this.y;
+        let sin = Math.sin(this.angle)
+        let cos = Math.cos(this.angle)
+        let xc1 = tempX_1 * cos
+        let xc2 = tempX_2 * cos
+        let ys1 = tempY_1 * sin
+        let ys2 = tempY_2 * sin
+        let xs1 = tempX_1 * sin
+        let xs2 = tempX_2 * sin
+        let yc1 = tempY_1 * cos
+        let yc2 = tempY_2 * cos
 
 
-        var points = [
-            [xc1 - ys1 + this.x, xs1 + yc1 + this.y],
-            [xc2 - ys1 + this.x, xs2 + yc1 + this.y],
-            [xc2 - ys2 + this.x, xs2 + yc2 + this.y],
-            [xc1 - ys2 + this.x, xs1 + yc2 + this.y]
+        let points = [
+            {x: xc1 - ys1 + this.x, y: xs1 + yc1 + this.y},
+            {x: xc2 - ys1 + this.x, y: xs2 + yc1 + this.y},
+            {x: xc2 - ys2 + this.x, y: xs2 + yc2 + this.y},
+            {x: xc1 - ys2 + this.x, y: xs1 + yc2 + this.y}
         ]
 
-        var perimeter = [];
+        let perimeter = [];
 
         for (let i = 0; i < points.length; i++) {
-            var point_a = points[i];
-            var point_b = points[i == points.length - 1 ? 0 : i + 1]
-
-            if (point_a[0] > point_b[0]) {
-                var memory = point_a;
-                point_a = point_b
-                point_b = memory
-            }
-
-            var xd = point_b[0] - point_a[0];
-            var yd = point_b[1] - point_a[1];
-            var dist = Math.sqrt(xd * xd + yd * yd);
-
-            for (let i = 0; i < dist; i = i + 2.5) {
-                perimeter.push(this.Get_coordinates_between_two_points(point_a, xd, yd, dist, i))
-            }
-
+            let point_a = points[i];
+            let point_b = points[i == points.length - 1 ? 0 : i + 1]
+            perimeter = perimeter.concat(this.getPointsBetween(point_a, point_b))
         }
+
 
         return perimeter
 
     }
 
-    Get_coordinates_between_two_points(p, xd, yd, d, i) {
-        const fractionOfTotal = i / d;
+    getPointsBetween(pointA, pointB) {
 
-        // this.ctx.fillStyle = "yellow";
-        // this.ctx.fillRect(p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal, 1, 1);
+        let points = []
+        let xd = pointB.x - pointA.x;
+        let yd = pointB.y - pointA.y;
+        let dist = Math.sqrt(xd * xd + yd * yd);
 
-        return [p[0] + xd * fractionOfTotal, p[1] + yd * fractionOfTotal]
+        for (let i = 0; i < dist; i = i + 2.5) {
+            const fractionOfTotal = i / dist;
+
+            // this.ctx.fillStyle = "red";
+            // this.ctx.fillRect(pointA[0] + xd * fractionOfTotal, pointA[1] + yd * fractionOfTotal, 2, 2);
+
+            points.push({
+                x: pointA.x + xd * fractionOfTotal,
+                y: pointA.y + yd * fractionOfTotal
+            })
+        }
+
+        return points;
 
     }
 
@@ -159,113 +156,23 @@ class Tank {
         for (let i = 0; i < this.bullets.length; i++) {
             const bullet = this.bullets[i];
             if (!bullet.move()) this.bullets.splice(i, 1)
-            else if (this.checkCollisionWithBullet(bullet.x, bullet.y, this.x, this.y, this.angle, this.tank_width, this.tank_height, true)) {
-                this.destroyed = true;
-            }
         }
     }
-
-    rayCasting() {
-
-        this.ctx.fillStyle = "white";
-        this.ctx.globalAlpha = 0.5;
-        for (let i = 0; i < 360; i++) {
-
-            var point = [this.x, this.y];
-            var angle = this.toRads(i);
-
-            this.ctx.save()
-            this.ctx.translate(point[0], point[1]);
-            this.ctx.rotate(angle);
-
-            var length = 0
-            var _point = [this.x, this.y]
-            var stop = false;
-
-            while (!stop) {
-
-                for (let i = 0; i < this.world_structures.length; i++) {
-                    const element = this.world_structures[i];
-                    if (this.collide_with(element, _point))
-                        stop = true;
-                }
-
-                length++;
-                _point[0] += Math.cos(angle);
-                _point[1] += Math.sin(angle);
-
-                if (
-                    _point[0] < 0 || _point[0] > this.filed_width ||
-                    _point[1] < 0 || _point[1] > this.field_heigth
-                ) stop = true;
-
-            }
-
-
-            this.ctx.fillRect(0, 0, length, 1);
-            this.ctx.restore()
-
-        }
-
-        this.ctx.globalAlpha = 1;
-
-
-    }
-
-    collide_with(structure, point) {
-        return (
-            point[0] >= structure.x &&
-            point[0] <= structure.x + structure.w &&
-            point[1] >= structure.y &&
-            point[1] <= structure.y + structure.h
-        );
-    }
-
-    checkCollisionWithBullet(collision_x, collision_y, x, y, r, w, h, tank_hack) {
-
-        this.ctx.save();
-        this.ctx.translate(x, y);
-        this.ctx.rotate(r);
-        var objectInversMatrix = this.ctx.getTransform().invertSelf();
-        this.ctx.restore()
-
-        var collision_point = new DOMPoint(collision_x, collision_y);
-        var relative_collision_point = objectInversMatrix.transformPoint(collision_point)
-
-        if (tank_hack) {
-            if (relative_collision_point.x > -(w / 2) &&
-                relative_collision_point.x < ((w - 50) / 2) &&
-                relative_collision_point.y > -(h / 2) &&
-                relative_collision_point.y < (h / 2)) {
-                return true
-            } else return false
-        } else {
-            if (relative_collision_point.x > -(w / 2) &&
-                relative_collision_point.x < ((w) / 2) &&
-                relative_collision_point.y > -(h / 2) &&
-                relative_collision_point.y < (h / 2)) {
-                return true
-            } else return false
-        }
-
-
-    }
-
 
 
     shot() {
 
         if (this.bullets.length < this.max_bullets) {
-            var tempX_2 = (this.x + ((this.tank_width) / 2)) - this.x;
-            var tempX_3 = (this.x + ((this.tank_width) / 2)) - this.x;
-            var tempY_2 = (this.y + (this.tank_height / 2)) - this.y;
-            var tempY_3 = (this.y - (this.tank_height / 2)) - this.y;
-            var rotatedX_2 = tempX_2 * Math.cos(this.angle) - tempY_2 * Math.sin(this.angle);
-            var rotatedX_3 = tempX_3 * Math.cos(this.angle) - tempY_3 * Math.sin(this.angle);
-            var rotatedY_2 = tempX_2 * Math.sin(this.angle) + tempY_2 * Math.cos(this.angle);
-            var rotatedY_3 = tempX_3 * Math.sin(this.angle) + tempY_3 * Math.cos(this.angle);
+            let tempX_2 = (this.x + ((this.tank_width) / 2)) - this.x;
+            let tempX_3 = (this.x + ((this.tank_width) / 2)) - this.x;
+            let tempY_2 = (this.y + (this.tank_height / 2)) - this.y;
+            let tempY_3 = (this.y - (this.tank_height / 2)) - this.y;
+            let rotatedX_2 = tempX_2 * Math.cos(this.angle) - tempY_2 * Math.sin(this.angle);
+            let rotatedX_3 = tempX_3 * Math.cos(this.angle) - tempY_3 * Math.sin(this.angle);
+            let rotatedY_2 = tempX_2 * Math.sin(this.angle) + tempY_2 * Math.cos(this.angle);
+            let rotatedY_3 = tempX_3 * Math.sin(this.angle) + tempY_3 * Math.cos(this.angle);
 
-            var bullet = new Bullet(this.x + ((rotatedX_2 + rotatedX_3) / 2) + this.acceleration * 2 * Math.cos(this.angle),
+            let bullet = new Bullet(this.x + ((rotatedX_2 + rotatedX_3) / 2) + this.acceleration * 2 * Math.cos(this.angle),
                 this.y + ((rotatedY_2 + rotatedY_3) / 2) + this.acceleration * 2 * Math.sin(this.angle),
                 this.angle, this.ctx, this.world_structures, this.field_heigth, this.filed_width);
 
