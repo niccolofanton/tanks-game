@@ -17,21 +17,28 @@ class Tank {
     destroyed = false;
 
     bullets = []
-    max_bullets = 100000
+    max_bullets = 1
 
     world_structures = []
     ctx = null;
     field_heigth = 0
     filed_width = 0
+    enemy = false;
 
-    constructor(world_structures, ctx, field_heigth, filed_width) {
+    constructor(world_structures, ctx, field_heigth, filed_width, x, y, enemy) {
         this.world_structures = world_structures;
         this.ctx = ctx;
         let _img = new Image();
-        _img.src = 'white_tank.png';
+        this.enemy = enemy;
+        if (enemy) _img.src = 'red_tank.png';
+        else _img.src = 'white_tank.png';
+
         this.img = _img
         this.field_heigth = field_heigth;
         this.filed_width = filed_width;
+
+        this.x = x;
+        this.y = y;
 
         this.draw();
     }
@@ -78,9 +85,9 @@ class Tank {
         this.y += this.acceleration * Math.sin(this.angle);
 
         // TODO: remove GOD mode
-        // if (!this.destroyed) 
+        if (!this.destroyed)
 
-        this.draw()
+            this.draw()
     }
 
     getPerimeterPoints() {
@@ -101,11 +108,22 @@ class Tank {
         let yc2 = tempY_2 * cos
 
 
-        let points = [
-            {x: xc1 - ys1 + this.x, y: xs1 + yc1 + this.y},
-            {x: xc2 - ys1 + this.x, y: xs2 + yc1 + this.y},
-            {x: xc2 - ys2 + this.x, y: xs2 + yc2 + this.y},
-            {x: xc1 - ys2 + this.x, y: xs1 + yc2 + this.y}
+        let points = [{
+                x: xc1 - ys1 + this.x,
+                y: xs1 + yc1 + this.y
+            },
+            {
+                x: xc2 - ys1 + this.x,
+                y: xs2 + yc1 + this.y
+            },
+            {
+                x: xc2 - ys2 + this.x,
+                y: xs2 + yc2 + this.y
+            },
+            {
+                x: xc1 - ys2 + this.x,
+                y: xs1 + yc2 + this.y
+            }
         ]
 
         let perimeter = [];

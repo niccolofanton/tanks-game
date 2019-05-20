@@ -5,7 +5,7 @@ class Bullet {
     width = 20;
     height = 3;
     bullet_speed = 15
-    max_bounces = 10000000
+    max_bounces = 3
     x = 0;
     y = 0;
     angle = 0;
