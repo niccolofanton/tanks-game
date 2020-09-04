@@ -1,0 +1,27 @@
+{
+  "name": "tanks-game",
+  "version": "1.0.0",
+  "description": "Simple game written in plain javascript using canvas and some maths",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "parcel-bundler": "^1.12.4",
+    "typescript": "^4.0.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "parcel index.html",
+    "build": "parcel build index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niccolofanton/tanks-game.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/niccolofanton/tanks-game/issues"
+  },
+  "homepage": "https://github.com/niccolofanton/tanks-game#readme"
+}
