@@ -1,4 +1,4 @@
-class Bullet {
+export class Bullet {
 
     field_heigth = 0
     filed_width = 0
@@ -10,10 +10,10 @@ class Bullet {
     y = 0;
     angle = 0;
     bounced_times = 0;
-    ctx = null;
-    world_structures;
+    ctx: CanvasRenderingContext2D;
+    world_structures: any;
 
-    constructor(x, y, angle, ctx, world_structures, field_heigth, filed_width) {
+    constructor(x: number, y: number, angle: number, ctx: CanvasRenderingContext2D, world_structures: any, field_heigth: number, filed_width: number) {
         this.world_structures = world_structures;
         this.x = x;
         this.y = y;
@@ -51,7 +51,7 @@ class Bullet {
 
 
 
-    toRads(number) {
+    toRads(number: number) {
         return (number * Math.PI) / 180;
     }
 

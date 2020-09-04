@@ -1,4 +1,6 @@
-class Tank {
+import { Bullet } from './bullet';
+
+export class Tank {
 
     angle = 0;
     acceleration = 0;
@@ -13,25 +15,27 @@ class Tank {
 
     x = 50;
     y = 25;
-    img = null;
+    img: HTMLImageElement;
     destroyed = false;
 
-    bullets = []
+    bullets: Bullet[] = []
     max_bullets = 1
 
-    world_structures = []
-    ctx = null;
+    world_structures: any[] = []
+    ctx: CanvasRenderingContext2D;
     field_heigth = 0
     filed_width = 0
     enemy = false;
 
-    constructor(world_structures, ctx, field_heigth, filed_width, x, y, enemy) {
+    constructor(world_structures: any[], ctx: CanvasRenderingContext2D, field_heigth: number, filed_width: number, x: number, y: number, enemy: boolean) {
         this.world_structures = world_structures;
+
+
         this.ctx = ctx;
         let _img = new Image();
         this.enemy = enemy;
-        if (enemy) _img.src = 'red_tank.png';
-        else _img.src = 'white_tank.png';
+        if (enemy) _img.src = 'http://127.0.0.1:8887/red_tank.png';
+        else _img.src = 'http://127.0.0.1:8887/white_tank.png';
 
         this.img = _img
         this.field_heigth = field_heigth;
@@ -109,24 +113,24 @@ class Tank {
 
 
         let points = [{
-                x: xc1 - ys1 + this.x,
-                y: xs1 + yc1 + this.y
-            },
-            {
-                x: xc2 - ys1 + this.x,
-                y: xs2 + yc1 + this.y
-            },
-            {
-                x: xc2 - ys2 + this.x,
-                y: xs2 + yc2 + this.y
-            },
-            {
-                x: xc1 - ys2 + this.x,
-                y: xs1 + yc2 + this.y
-            }
+            x: xc1 - ys1 + this.x,
+            y: xs1 + yc1 + this.y
+        },
+        {
+            x: xc2 - ys1 + this.x,
+            y: xs2 + yc1 + this.y
+        },
+        {
+            x: xc2 - ys2 + this.x,
+            y: xs2 + yc2 + this.y
+        },
+        {
+            x: xc1 - ys2 + this.x,
+            y: xs1 + yc2 + this.y
+        }
         ]
 
-        let perimeter = [];
+        let perimeter: any[] = [];
 
         for (let i = 0; i < points.length; i++) {
             let point_a = points[i];
@@ -139,7 +143,7 @@ class Tank {
 
     }
 
-    getPointsBetween(pointA, pointB) {
+    getPointsBetween(pointA: { x: any; y: any; }, pointB: { x: any; y: any; }) {
 
         let points = []
         let xd = pointB.x - pointA.x;
@@ -199,7 +203,7 @@ class Tank {
 
     }
 
-    toRads(number) {
+    toRads(number: number) {
         return (number * Math.PI) / 180;
     }
 
