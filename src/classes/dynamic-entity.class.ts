@@ -8,35 +8,39 @@ declare interface Controls {
     right: boolean;
 }
 
+export declare const RUNNING_STATUS = 1;
+
 export class DynamicEntity extends Entity {
-
-
-    acceleration: number = 1;
-    accelerationFrame = 1;
+    // movement variables
+    speed: number = 0;
+    acceleration = 1;
+    deceleration = 1;
     maxSpeed: number = 6;
-    
-    
-    
-    maxAngularSpeed: number = 10;
-    angularAcceleration: number = 0;
-    angularAccelerationFrame = 2;
-    angularDecelerationFrame = 1.2;
 
+    // rotation variables
+    angularSpeed: number = 0;
+    angularAcceleration = 0.8;
+    angularDeceleration = 0.6;
+    maxAngularSpeed: number = 2;
 
-    private lastTime: number = 0;
+    // controls
     private controls: Controls = {
         forward: false,
         backward: false,
         left: false,
         right: false,
     }
+    // internal status
+    private status: number = RUNNING_STATUS;
 
     constructor(
         identifier: string = '',
         vertices: Point[],
         texture: HTMLImageElement | null = null,
-        rotation: number,
+        rotation: number = 0,
         acceleration: number | null = null,
+        deceleration: number | null = null,
+        angularDeceleration: number | null = null,
         angularAcceleration: number | null = null,
         maxSpeed: number | null = null,
         maxAngularSpeed: number | null = null,
@@ -59,81 +63,152 @@ export class DynamicEntity extends Entity {
             this.maxAngularSpeed = maxAngularSpeed;
         }
 
-        window.addEventListener("keydown", (event) => this.keyDownControls(event), true);
-        window.addEventListener("keyup", (event) => this.keyUpControls(event), true);
+        if (deceleration !== null) {
+            this.deceleration = deceleration;
+        }
+
+        if (angularDeceleration !== null) {
+            this.angularDeceleration = angularDeceleration;
+        }
+
+        window.addEventListener("keydown", (event) => this.handleKeyDownControls(event), true);
+        window.addEventListener("keyup", (event) => this.handleKeyUpControls(event), true);
     }
 
-    public updateVertices(time: number): Point[] {
-
-        // update the position by time span
-        this.lastTime = time;
-        const timeSpan = performance.now() - time;
-
-        this.updatePosition(timeSpan);
-
-
-        if (this.angularAcceleration !== 0) {
-
-            this.rotation += this.angularAcceleration;
-
-            // get the center
-            const center = getPolygonCentroid(this.vertices);
-            // rotate vertices around the center
-            this.vertices.forEach(vertex => {
-                const point = rotatePoint(vertex, center, this.angularAcceleration);
-                vertex.x = point.x;
-                vertex.y = point.y;
-            });
-        }
-
-        if(this.acceleration !== 0){
-            const rads = degreesToRadians(this.rotation)
-            this.vertices.forEach(vertex => {
-                vertex.x += this.acceleration * Math.sin(rads); 
-                vertex.y -= this.acceleration * Math.cos(rads);
-            });
-        }
-
+    public getVertices(): Point[] {
         return this.vertices;
     }
 
 
-    updatePosition(time: number) {
+    public updateVertices(): Point[] {
+        // used to prevent updated when entity is stopped
+        if (this.status !== RUNNING_STATUS) {
+            return this.vertices;
+        }
+        
+        // read commands and update movement variables
+        this.updateMovement();
+        // update vertices array
+        this.calcVertices();
+        return this.vertices;
+    }
+
+
+    /**
+     * Calcs vertices by rotation e movement
+     */
+    private calcVertices() {
+        if (this.angularAcceleration !== 0) {
+            this.calcRotatedVertices();
+        }
+
+        if (this.acceleration !== 0) {
+            this.calcTranslatedVertices();
+        }
+    }
+
+    /**
+     * Calcs rotated vertices
+     */
+    calcRotatedVertices() {
+        // get the center
+        const center = getPolygonCentroid(this.vertices);
+        // rotate vertices around the center
+        this.vertices.forEach(vertex => {
+            const point = rotatePoint(vertex, center, this.angularSpeed);
+            vertex.x = point.x;
+            vertex.y = point.y;
+        });
+    }
+
+    /**
+     * Calcs translated vertices
+     */
+    calcTranslatedVertices() {
+        const rads = degreesToRadians(this.rotation)
+        this.vertices.forEach(vertex => {
+            vertex.x += this.speed * Math.sin(rads);
+            vertex.y -= this.speed * Math.cos(rads);
+        });
+    }
+
+    /**
+     * Updates movement
+     */
+    private updateMovement() {
+        this.updateAcceleration();
+        this.updateRotation();
+    }
+
+    /**
+     * Updates acceleration
+     */
+    private updateAcceleration() {   
         // accelerate
-        if (this.controls.forward && this.acceleration < this.maxSpeed) {
-            this.acceleration += this.accelerationFrame * (time / 1000);
+        if (this.controls.forward && this.speed < this.maxSpeed) {
+            this.speed += this.acceleration;
         }
         // decelerate
-        if (this.controls.backward && this.acceleration > -this.maxSpeed) {
-            this.acceleration -= this.accelerationFrame * (time / 1000);
-        }
-        // rotate right
-        if (this.controls.right && this.angularAcceleration < this.maxAngularSpeed) {
-            this.angularAcceleration += this.angularAccelerationFrame * (time / 1000);
-        }
-        // rotate left
-        if (this.controls.left && this.angularAcceleration > -this.maxAngularSpeed) {
-            this.angularAcceleration -= this.angularAccelerationFrame * (time / 1000);
+        if (this.controls.backward && this.speed > -this.maxSpeed) {
+            this.speed -= this.acceleration;
         }
 
         // idle acceleration 
-        if (Math.abs(this.acceleration) <= 0.1) { this.acceleration = 0 }
-        else if (this.acceleration < 0) { this.acceleration += 0.1 * (time / 1000); }
-        else if (this.acceleration > 0) { this.acceleration -= 0.1 * (time / 1000); }
+        if (this.controls.forward === false && this.controls.backward === false) {
+            if (Math.abs(this.speed) <= this.deceleration) { this.speed = 0 }
+            else if (this.speed < 0) { this.speed += this.deceleration  }
+            else if (this.speed > 0) { this.speed -= this.deceleration  }
+        }
+    }
+
+    /**
+     * Updates rotation
+     * @param  
+     */
+    private updateRotation() {
+
+        // console.log(this.controls.right , this.angularAcceleration < this.maxAngularSpeed);
+
+        // rotate right
+        if (this.controls.right && this.angularSpeed < this.maxAngularSpeed) {
+            this.angularSpeed += this.angularAcceleration ;
+        }
+        // rotate left
+        if (this.controls.left && this.angularSpeed > -this.maxAngularSpeed) {
+            this.angularSpeed -= this.angularAcceleration;
+
+        }
 
 
+        // TODO: ICE EFFECT
+        // if (this.controls.left || this.controls.right) {
+        //     // save total rotation
+        //     this.rotation += this.angularSpeed;
+        // }
 
+        // save total rotation
+        this.rotation += this.angularSpeed;
+
+        if(this.rotation > 360){
+            this.rotation = 0;
+        }
+
+        if(this.rotation < 0){
+            this.rotation = 360;
+        }
+
+        // idle angular acceleration
         if (this.controls.right === false && this.controls.left === false) {
-            // idle angular acceleration
-            if (Math.abs(this.angularAcceleration) <= this.angularDecelerationFrame) { this.angularAcceleration = 0 }
-            else if (this.angularAcceleration < 0) { this.angularAcceleration += this.angularDecelerationFrame * (time / 1000); }
-            else if (this.angularAcceleration > 0) { this.angularAcceleration -= this.angularDecelerationFrame * (time / 1000); }
+            if (Math.abs(this.angularSpeed) <= this.angularDeceleration) { this.angularSpeed = 0 }
+            else if (this.angularSpeed < 0) { this.angularSpeed += this.angularDeceleration; }
+            else if (this.angularSpeed > 0) { this.angularSpeed -= this.angularDeceleration; }
         }
 
 
     }
 
-    private keyDownControls(event: KeyboardEvent) {
+
+    private handleKeyDownControls(event: KeyboardEvent) {
         switch (event.keyCode) {
             case 65:
                 this.controls.left = true;
@@ -151,13 +226,10 @@ export class DynamicEntity extends Entity {
                 this.controls.forward = false;
                 this.controls.backward = true;
                 break;
-
         }
     }
 
-    private keyUpControls(event: KeyboardEvent) {
-        console.log(event.keyCode);
-
+    private handleKeyUpControls(event: KeyboardEvent) {
         switch (event.keyCode) {
             case 65:
                 this.controls.left = false;

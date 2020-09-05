@@ -1,9 +1,8 @@
 import { Point, getPolygonCentroid, rotatePoint } from '../functions/utils';
 
-export class Entity {
+export abstract class Entity {
     // vertices needs to be calculated by angle
-    public vertices: Point[] = [];
-    public rotate: number = 0;
+    protected vertices: Point[] = [];
     protected rotation: number = 0;
     public readonly identifier: string = 'DEFAULT_IDENTIFIER';
     public readonly texture: HTMLImageElement | null;
@@ -12,7 +11,7 @@ export class Entity {
         identifier: string = '',
         vertices: Point[],
         texture: HTMLImageElement | null = null,
-        rotation: number,
+        rotation: number = 0,
     ) {
         // required
         if (identifier === null) {
@@ -34,33 +33,18 @@ export class Entity {
         }
 
         this.texture = texture;
-        this.rotation = rotation;
-        this.rotate = rotation;
-    }
 
-    /**
-     * Gets vertices
-     * @returns vertices 
-     */
-    public updateVertices(time: number): Point[] {
-
-        if (this.rotate === 0) {
-            return this.vertices;
+        // rotate vertices
+        if (rotation !== 0) {
+            this.rotation = rotation;
+            // get the center
+            const center = getPolygonCentroid(this.vertices);
+            // rotate vertices around the center
+            this.vertices.forEach(vertex => {
+                const point = rotatePoint(vertex, center, rotation);
+                vertex.x = point.x;
+                vertex.y = point.y;
+            });
         }
-
-        // get the center
-        const center = getPolygonCentroid(this.vertices);
-        // rotate vertices around the center
-        this.vertices.forEach(vertex => {
-            const point = rotatePoint(vertex, center, this.rotate);
-            vertex.x = point.x;
-            vertex.y = point.y;
-        });
-
-        // the vertices are rotated now the angle is 0
-        this.rotate = 0;
-
-        return this.vertices;
     }
-
 }

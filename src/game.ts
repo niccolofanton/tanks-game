@@ -2,18 +2,29 @@ import { Entity } from './classes/entity.class';
 import { World } from './world';
 import { Point } from './functions/utils';
 import { DynamicEntity } from './classes/dynamic-entity.class';
+import { StaticEntity } from './classes/static-entity.class';
 
 const vertices: Point[] = [
     { x: 50, y: 50 },
-    { x:100, y: 35 },
+    { x: 75, y: 25 },
+    { x: 100, y: 50 },
+    { x: 100, y: 100 },
     { x: 50, y: 100 }
-]
-const entity = new Entity('1', vertices, null, 10);
-const world = new World();
+];
 
-const dEntity = new DynamicEntity('2', vertices, null, 0);
+const vertices2: Point[] = [
+    { x: 200, y: 200 },
+    { x: 300, y: 200 },
+    { x: 300, y: 300 },
+    { x: 200, y: 300 },
+];
 
-world.addEntity(entity);
-world.addEntity(dEntity);
+const world = new World(16);
+
+const dEntity = new DynamicEntity('1', vertices, null);
+const sEntity = new StaticEntity('2', vertices2, null);
+
+world.addDynamicEntity(dEntity);
+world.addStaticEntity(sEntity);
 
 world.drawTest();

@@ -1,14 +1,8 @@
 import { Tank } from './tank';
 import { Raycaster } from './raycasting';
-import { Entity } from './classes/entity.class';
+import { DynamicEntity } from './classes/dynamic-entity.class';
+import { StaticEntity } from './classes/static-entity.class';
 
-interface Command {
-  forward: boolean,
-  backward: boolean,
-  left: boolean,
-  right: boolean,
-  shot: boolean
-}
 
 // const world = new World();
 
@@ -16,18 +10,13 @@ export class World {
 
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
-  filed_width = 200;
-  field_heigth = 200;
-  tanks: Tank[] = [];
-  controls: Command[] = [];
-  updateCanvas = true;
-  structures: any[] = [];
+  filed_width = window.innerWidth;
+  field_heigth = window.innerHeight;
 
-  entities: Entity[] = [];
+  staticEntities: Array<StaticEntity> = [];
+  dynamicEntities: Array<DynamicEntity> = [];
 
-
-  private clock = performance.now();
-
+  private refreshRate: number = 16.6;
 
 
   segments = [{
@@ -81,11 +70,10 @@ export class World {
   ];
   // DRAW LOOP
 
-  constructor() {
-
+  constructor(refreshRate: number = 16.6) {
+    this.refreshRate = refreshRate;
     // set up world
     this.canvas = document.createElement("canvas");
-
     // bind context
     const context = this.canvas.getContext("2d");
     if (context !== undefined && context !== null) {
@@ -94,123 +82,41 @@ export class World {
       this.ctx = new CanvasRenderingContext2D();
       console.error('Context not found!')
     }
-
     this.canvas.width = this.filed_width;
     this.canvas.height = this.field_heigth;
     document.body.appendChild(this.canvas);
-
-    const button = document.getElementById('game1');
-
-    if (button !== undefined && button !== null) {
-      button.addEventListener('click', () => {
-        document.body.removeChild(button)
-        this.startGame()
-      }, false);
-    }
-
   }
 
-
-  startGame() {
-
-    // generate new random stractures
-    this.structures = this.create(10, this.filed_width, this.field_heigth);
-    this.structures.forEach(structure => {
-
-      let segement_1 = {
-        a: {
-          x: structure.x,
-          y: structure.y,
-          angle: 0
-        },
-        b: {
-          x: structure.x + structure.w,
-          y: structure.y,
-          angle: 0
-        },
-      };
-
-      let segement_2 = {
-        a: {
-          x: structure.x + structure.w,
-          y: structure.y,
-          angle: 0
-        },
-        b: {
-          x: structure.x + structure.w,
-          y: structure.y + structure.h,
-          angle: 0
-        }
-      };
-      let segement_3 = {
-        a: {
-          x: structure.x + structure.w,
-          y: structure.y + structure.h,
-          angle: 0
-        },
-        b: {
-          x: structure.x,
-          y: structure.y + structure.h,
-          angle: 0
-        },
-      };
-      let segement_4 = {
-        a: {
-          x: structure.x,
-          y: structure.y + structure.h,
-          angle: 0
-        },
-        b: {
-          x: structure.x,
-          y: structure.y,
-          angle: 0
-        }
-      };
-
-      this.segments.push(segement_1)
-      this.segments.push(segement_2)
-      this.segments.push(segement_3)
-      this.segments.push(segement_4)
-    })
-
-
-
-    const tank1 = new Tank(this.structures, this.ctx, this.field_heigth, this.filed_width, Math.random() * this.filed_width, Math.random() * this.field_heigth, false);
-    const tank2 = new Tank(this.structures, this.ctx, this.field_heigth, this.filed_width, Math.random() * this.filed_width, Math.random() * this.field_heigth, true);
-
-    // create new tanks
-    this.tanks.push(tank1)
-
-    // create new tanks
-    this.tanks.push(tank2);
-
-    for (let i = 0; i < this.tanks.length; i++) {
-      this.controls.push({
-        forward: false,
-        backward: false,
-        left: false,
-        right: false,
-        shot: false
-      })
-    }
-
-    // Bind commands
-    window.addEventListener("keydown", (event) => this.keyDownControls(event), true);
-    window.addEventListener("keyup", (event) => this.keyUpControls(event), true);
-
-    setInterval(() => this.draw(this.ctx, this.tanks, this.filed_width, this.field_heigth), 16.6)
+  addStaticEntity(e: StaticEntity) {
+    this.staticEntities.push(e);
   }
 
-
-  addEntity(e: Entity) {
-    this.entities.push(e);
+  addDynamicEntity(e: DynamicEntity) {
+    this.dynamicEntities.push(e);
   }
 
+  drawTest() {
+    setInterval(() => this.drawWorld(), this.refreshRate);
+  }
 
-  drawEntity(entity: Entity) {
+  /**
+   * Draws world
+   */
+  private drawWorld() {
+    // draw black background
+    this.ctx.fillStyle = "black";
+    this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-    const passedTime = performance.now() - this.clock;
-    const points = entity.updateVertices(passedTime);
+    this.dynamicEntities.forEach(e => this.updateEntity(e));
+    [...this.staticEntities, ...this.dynamicEntities].forEach(e => this.drawEntity(e));
+  }
+
+  /**
+   * Draws entity
+   * @param entity 
+   */
+  private drawEntity(entity: DynamicEntity | StaticEntity): void {
+    const points = entity.getVertices();
 
     if (points.length === 0) {
       console.error(`${entity.identifier} has no vertices`);
@@ -229,16 +135,179 @@ export class World {
     this.ctx.fill();
   }
 
-  drawWorld() {
-    // draw black background
-    this.ctx.fillStyle = "black";
-    this.ctx.fillRect(0, 0, 1000, 500);
-    this.entities.forEach(e => this.drawEntity(e));    
+  /**
+   * Updates entity
+   * @param entity
+   */
+  private updateEntity(entity: DynamicEntity): void {
+    entity.updateVertices();
   }
 
-  drawTest() {
-    setInterval(() => this.drawWorld(), 16.6);
+  
+  private collisionDetection(entity: DynamicEntity): Array<DynamicEntity | StaticEntity> | null {
+
+
+
+    return null;
   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // startGame() {
+
+  //   // generate new random stractures
+  //   this.structures = this.create(10, this.filed_width, this.field_heigth);
+  //   this.structures.forEach(structure => {
+
+  //     let segement_1 = {
+  //       a: {
+  //         x: structure.x,
+  //         y: structure.y,
+  //         angle: 0
+  //       },
+  //       b: {
+  //         x: structure.x + structure.w,
+  //         y: structure.y,
+  //         angle: 0
+  //       },
+  //     };
+
+  //     let segement_2 = {
+  //       a: {
+  //         x: structure.x + structure.w,
+  //         y: structure.y,
+  //         angle: 0
+  //       },
+  //       b: {
+  //         x: structure.x + structure.w,
+  //         y: structure.y + structure.h,
+  //         angle: 0
+  //       }
+  //     };
+  //     let segement_3 = {
+  //       a: {
+  //         x: structure.x + structure.w,
+  //         y: structure.y + structure.h,
+  //         angle: 0
+  //       },
+  //       b: {
+  //         x: structure.x,
+  //         y: structure.y + structure.h,
+  //         angle: 0
+  //       },
+  //     };
+  //     let segement_4 = {
+  //       a: {
+  //         x: structure.x,
+  //         y: structure.y + structure.h,
+  //         angle: 0
+  //       },
+  //       b: {
+  //         x: structure.x,
+  //         y: structure.y,
+  //         angle: 0
+  //       }
+  //     };
+
+  //     this.segments.push(segement_1)
+  //     this.segments.push(segement_2)
+  //     this.segments.push(segement_3)
+  //     this.segments.push(segement_4)
+  //   })
+
+
+
+  //   const tank1 = new Tank(this.structures, this.ctx, this.field_heigth, this.filed_width, Math.random() * this.filed_width, Math.random() * this.field_heigth, false);
+  //   const tank2 = new Tank(this.structures, this.ctx, this.field_heigth, this.filed_width, Math.random() * this.filed_width, Math.random() * this.field_heigth, true);
+
+  //   // create new tanks
+  //   this.tanks.push(tank1)
+
+  //   // create new tanks
+  //   this.tanks.push(tank2);
+
+  //   for (let i = 0; i < this.tanks.length; i++) {
+  //     this.controls.push({
+  //       forward: false,
+  //       backward: false,
+  //       left: false,
+  //       right: false,
+  //       shot: false
+  //     })
+  //   }
+
+  //   // Bind commands
+  //   window.addEventListener("keydown", (event) => this.keyDownControls(event), true);
+  //   window.addEventListener("keyup", (event) => this.keyUpControls(event), true);
+
+  //   setInterval(() => this.draw(this.ctx, this.tanks, this.filed_width, this.field_heigth), 16.6)
+  // }
+
 
   // draw(ctx: CanvasRenderingContext2D, tanks: any[], width: number, heigth: number) {
 
