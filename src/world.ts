@@ -107,7 +107,11 @@ export class World {
     this.ctx.fillStyle = "black";
     this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-    this.dynamicEntities.forEach(e => this.updateEntity(e));
+
+    this.dynamicEntities.forEach(e => this.collisionDetection(e));
+
+
+
     [...this.staticEntities, ...this.dynamicEntities].forEach(e => this.drawEntity(e));
   }
 
@@ -143,16 +147,20 @@ export class World {
     entity.updateVertices();
   }
 
-  
-  private collisionDetection(entity: DynamicEntity): Array<DynamicEntity | StaticEntity> | null {
 
+  private collisionDetection(entity: DynamicEntity): void {
 
+      [...this.staticEntities, ...this.dynamicEntities]
+        .filter(e => e.identifier !== entity.identifier)
+        .forEach(e => {
+          if (entity.collideWith(e, entity.getPredictedEdges())) {
+            entity.collisionResolution(e);
+          }else {
+            entity.updateVertices();
+          }
+        });
 
-    return null;
   }
-
-
-
 
 
 

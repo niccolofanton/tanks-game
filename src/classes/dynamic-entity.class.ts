@@ -13,15 +13,15 @@ export declare const RUNNING_STATUS = 1;
 export class DynamicEntity extends Entity {
     // movement variables
     speed: number = 0;
-    acceleration = 1;
-    deceleration = 1;
-    maxSpeed: number = 6;
+    acceleration = 2;
+    deceleration = 0.8;
+    maxSpeed: number = 10;
 
     // rotation variables
     angularSpeed: number = 0;
-    angularAcceleration = 0.8;
-    angularDeceleration = 0.6;
-    maxAngularSpeed: number = 2;
+    angularAcceleration = 0.1;
+    angularDeceleration =0.4;
+    maxAngularSpeed: number = 3;
 
     // controls
     private controls: Controls = {
@@ -73,6 +73,8 @@ export class DynamicEntity extends Entity {
 
         window.addEventListener("keydown", (event) => this.handleKeyDownControls(event), true);
         window.addEventListener("keyup", (event) => this.handleKeyUpControls(event), true);
+
+
     }
 
     public getVertices(): Point[] {
@@ -85,50 +87,83 @@ export class DynamicEntity extends Entity {
         if (this.status !== RUNNING_STATUS) {
             return this.vertices;
         }
-        
+
         // read commands and update movement variables
         this.updateMovement();
         // update vertices array
-        this.calcVertices();
+        this.vertices = this.calcVertices(this.vertices);
+        this.edges = this.buildEdges(this.vertices);
         return this.vertices;
     }
 
+    public collisionResolution(e: Entity) {
+        // reverse
+        this.angularSpeed = -(this.angularSpeed / 2);
+        this.rotation += this.angularSpeed;
+        this.speed = -(this.speed/2);
+        this.updateVertices();
+
+        // this.angularAcceleration = -this.angularAcceleration;
+        // this.acceleration = -this.acceleration;
+
+        // console.log('aaaa');
+
+        
+        // const predictedVertices = this.calcVertices(this.copyVertices(this.vertices));
+        // console.log(predictedVertices);
+
+
+        // if (!this.collideWith(e, this.buildEdges(predictedVertices))) {
+        // }
+    }
+    
+    getPredictedEdges(){
+        const predictedVertices = this.calcVertices(this.copyVertices(this.vertices));
+        return this.buildEdges(predictedVertices);
+    }
+
+    private copyVertices(vertices: Point[]): Point[] {
+        const copiedVertices: Point[] = [];
+        for (let index = 0; index < vertices.length; index++) {
+            const element = vertices[index];
+            copiedVertices.push({ x: element.x, y: element.y });
+        }
+        return copiedVertices;
+    }
 
     /**
      * Calcs vertices by rotation e movement
      */
-    private calcVertices() {
-        if (this.angularAcceleration !== 0) {
-            this.calcRotatedVertices();
-        }
-
-        if (this.acceleration !== 0) {
-            this.calcTranslatedVertices();
-        }
+    private calcVertices(vertices: Point[]): Point[] {
+        vertices = this.calcRotatedVertices(vertices);
+        vertices = this.calcTranslatedVertices(vertices);
+        return vertices;
     }
 
     /**
      * Calcs rotated vertices
      */
-    calcRotatedVertices() {
+    private calcRotatedVertices(vertices: Point[]): Point[] {
         // get the center
-        const center = getPolygonCentroid(this.vertices);
+        const center = getPolygonCentroid(vertices);
         // rotate vertices around the center
-        this.vertices.forEach(vertex => {
+        return vertices.map(vertex => {
             const point = rotatePoint(vertex, center, this.angularSpeed);
             vertex.x = point.x;
             vertex.y = point.y;
+            return vertex;
         });
     }
 
     /**
      * Calcs translated vertices
      */
-    calcTranslatedVertices() {
+    private calcTranslatedVertices(vertices: Point[]): Point[] {
         const rads = degreesToRadians(this.rotation)
-        this.vertices.forEach(vertex => {
+        return vertices.map(vertex => {
             vertex.x += this.speed * Math.sin(rads);
             vertex.y -= this.speed * Math.cos(rads);
+            return vertex;
         });
     }
 
@@ -143,7 +178,7 @@ export class DynamicEntity extends Entity {
     /**
      * Updates acceleration
      */
-    private updateAcceleration() {   
+    private updateAcceleration() {
         // accelerate
         if (this.controls.forward && this.speed < this.maxSpeed) {
             this.speed += this.acceleration;
@@ -156,8 +191,8 @@ export class DynamicEntity extends Entity {
         // idle acceleration 
         if (this.controls.forward === false && this.controls.backward === false) {
             if (Math.abs(this.speed) <= this.deceleration) { this.speed = 0 }
-            else if (this.speed < 0) { this.speed += this.deceleration  }
-            else if (this.speed > 0) { this.speed -= this.deceleration  }
+            else if (this.speed < 0) { this.speed += this.deceleration }
+            else if (this.speed > 0) { this.speed -= this.deceleration }
         }
     }
 
@@ -171,7 +206,7 @@ export class DynamicEntity extends Entity {
 
         // rotate right
         if (this.controls.right && this.angularSpeed < this.maxAngularSpeed) {
-            this.angularSpeed += this.angularAcceleration ;
+            this.angularSpeed += this.angularAcceleration;
         }
         // rotate left
         if (this.controls.left && this.angularSpeed > -this.maxAngularSpeed) {
@@ -186,24 +221,25 @@ export class DynamicEntity extends Entity {
         //     this.rotation += this.angularSpeed;
         // }
 
-        // save total rotation
-        this.rotation += this.angularSpeed;
 
-        if(this.rotation > 360){
-            this.rotation = 0;
-        }
 
-        if(this.rotation < 0){
-            this.rotation = 360;
-        }
+        // if (this.rotation > 360) {
+        //     this.rotation = 0;
+        // }
+
+        // if (this.rotation < 0) {
+        //     this.rotation = 360;
+        // }
 
         // idle angular acceleration
         if (this.controls.right === false && this.controls.left === false) {
             if (Math.abs(this.angularSpeed) <= this.angularDeceleration) { this.angularSpeed = 0 }
-            else if (this.angularSpeed < 0) { this.angularSpeed += this.angularDeceleration; }
+            if (this.angularSpeed < 0) { this.angularSpeed += this.angularDeceleration; }
             else if (this.angularSpeed > 0) { this.angularSpeed -= this.angularDeceleration; }
         }
 
+        // save total rotation
+        this.rotation += this.angularSpeed;
 
     }
 
